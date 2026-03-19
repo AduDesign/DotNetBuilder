@@ -99,24 +99,6 @@
 - MVVM 架构
 - AduSkin UI 控件库
 
-## 项目结构
-
-```
-DotNetBuilder/
-├── Models/
-│   ├── GitProject.cs       # Git项目数据模型
-│   └── BuildModels.cs       # 构建相关模型
-├── ViewModels/
-│   ├── MainViewModel.cs    # 主窗口ViewModel
-│   └── ViewModelBase.cs    # ViewModel基类
-├── Services/
-│   ├── GitService.cs       # Git操作服务
-│   └── MSBuildService.cs   # MSBuild服务
-├── Converters/
-│   └── Converters.cs       # 值转换器
-└── MainWindow.xaml         # 主窗口界面
-```
-
 ## 构建项目
 
 ```bash
