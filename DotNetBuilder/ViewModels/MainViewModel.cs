@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using AduSkin.Controls;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
@@ -16,6 +17,7 @@ namespace DotNetBuilder.ViewModels
     {
         private readonly GitService _gitService;
         private readonly MSBuildService _msbuildService;
+        private readonly ConfigService _configService;
         private string _selectedPath = string.Empty;
         private string _logOutput = string.Empty;
         private bool _isBusy;
@@ -27,6 +29,7 @@ namespace DotNetBuilder.ViewModels
         {
             _gitService = new GitService();
             _msbuildService = new MSBuildService();
+            _configService = new ConfigService();
 
             // 初始化命令
             SelectDirectoryCommand = new AsyncRelayCommand(SelectDirectoryAsync);
@@ -40,6 +43,7 @@ namespace DotNetBuilder.ViewModels
             SelectNoneCommand = new RelayCommand(SelectNone);
             ClearLogCommand = new RelayCommand(_ => LogOutput = string.Empty);
             RefreshStatusCommand = new AsyncRelayCommand(RefreshStatusAsync);
+            SaveConfigCommand = new AsyncRelayCommand(SaveConfigAsync, () => Projects.Any());
 
             // 单个项目操作命令
             SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
@@ -47,6 +51,9 @@ namespace DotNetBuilder.ViewModels
 
             // 加载MSBuild版本
             LoadMSBuildVersions();
+
+            // 自动加载配置
+            _ = LoadConfigAsync();
         }
 
         #region 属性
@@ -135,6 +142,7 @@ namespace DotNetBuilder.ViewModels
         public ICommand RefreshStatusCommand { get; }
         public ICommand SyncSingleCommand { get; }
         public ICommand BuildSingleCommand { get; }
+        public ICommand SaveConfigCommand { get; }
 
         #endregion
 
@@ -261,7 +269,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = SelectedProjects.ToList();
             if (!selectedProjects.Any())
             {
-                MessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -343,7 +351,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = SelectedProjects.Where(p => p.IsDotNetProject).ToList();
             if (!selectedProjects.Any())
             {
-                MessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -352,7 +360,7 @@ namespace DotNetBuilder.ViewModels
             if (projectsWithoutMSBuild.Any())
             {
                 var names = string.Join(", ", projectsWithoutMSBuild.Select(p => p.Name));
-                MessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -457,6 +465,59 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        private async Task SaveConfigAsync()
+        {
+            try
+            {
+                await _configService.SaveConfigAsync(Projects, SelectedPath);
+                LogOutput += $"\n配置已保存\n";
+                AduMessageBox.Show("配置保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                LogOutput += $"\n保存配置失败: {ex.Message}\n";
+                AduMessageBox.Show($"保存配置失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task LoadConfigAsync()
+        {
+            try
+            {
+                var config = await _configService.LoadConfigAsync();
+                if (config == null || string.IsNullOrEmpty(config.SelectedPath))
+                    return;
+
+                // 设置路径并扫描
+                SelectedPath = config.SelectedPath;
+                LogOutput += $"正在加载上次配置...\n";
+                await ScanProjectsAsync();
+
+                // 应用项目配置
+                foreach (var projectConfig in config.Projects)
+                {
+                    var project = Projects.FirstOrDefault(p => p.Path == projectConfig.Path);
+                    if (project != null)
+                    {
+                        project.IsSelected = projectConfig.IsSelected;
+                        project.ExecuteFile = projectConfig.ExecuteFile ?? string.Empty;
+
+                        // 恢复 MSBuild 版本
+                        if (!string.IsNullOrEmpty(projectConfig.SelectedMSBuildVersion))
+                        {
+                            project.SelectedMSBuildVersion = MSBuildVersions.FirstOrDefault(v => v.DisplayName == projectConfig.SelectedMSBuildVersion);
+                        }
+                    }
+                }
+
+                LogOutput += $"配置加载完成\n";
+            }
+            catch
+            {
+                // 加载失败时静默忽略
+            }
+        }
+
         private void RunSelectedAsync(object? parameter)
         {
             if (SelectedProject == null || string.IsNullOrEmpty(SelectedProject.ExecuteFile))
@@ -477,7 +538,7 @@ namespace DotNetBuilder.ViewModels
             catch (Exception ex)
             {
                 LogOutput += $"启动失败: {ex.Message}\n";
-                MessageBox.Show($"启动程序失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                AduMessageBox.Show($"启动程序失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -606,7 +667,7 @@ namespace DotNetBuilder.ViewModels
 
             if (project.SelectedMSBuildVersion == null)
             {
-                MessageBox.Show($"请先为 {project.Name} 选择 MSBuild 版本", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show($"请先为 {project.Name} 选择 MSBuild 版本", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 

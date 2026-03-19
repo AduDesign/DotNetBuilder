@@ -83,7 +83,7 @@
                         Content="刷新状态" />
                     <AduSkin:AduButton
                         Width="80"
-                        Command="{Binding SaveCommand}"
+                        Command="{Binding SaveConfigCommand}"
                         Content="保存" />
                 </StackPanel>
             </Grid>
@@ -462,6 +462,13 @@
                     Padding="10,0"
                     Command="{Binding RunSelectedCommand}"
                     Content="运行程序" />
+
+                <AduSkin:AduButton
+                    Width="Auto"
+                    Margin="10,0,0,0"
+                    Padding="10,0"
+                    Command="{Binding SaveConfigCommand}"
+                    Content="保存配置" />
             </StackPanel>
 
             <!--  日志输出  -->
