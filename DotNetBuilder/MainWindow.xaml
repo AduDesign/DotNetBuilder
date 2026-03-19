@@ -55,31 +55,13 @@
                         Foreground="#333"
                         Text=".NET 项目管理器" />
                 </StackPanel>
-
-                <!--  全选/取消全选  -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <AduSkin:AduButton
-                        Width="80"
-                        Margin="0,0,8,0"
-                        Command="{Binding SelectAllCommand}"
-                        Content="全选" />
-                    <AduSkin:AduButton
-                        Width="80"
-                        Margin="0,0,8,0"
-                        Command="{Binding SelectNoneCommand}"
-                        Content="取消全选" />
-                    <AduSkin:AduButton
-                        Width="80"
-                        Command="{Binding RefreshStatusCommand}"
-                        Content="刷新状态" />
-                </StackPanel>
             </Grid>
         </Border>
 
         <!--  工具栏  -->
         <Border
             Grid.Row="1"
-            Padding="20,15"
+            Padding="10"
             Background="White"
             BorderBrush="#E0E0E0"
             BorderThickness="0,0,0,1">
@@ -117,6 +99,24 @@
                         Text="{Binding Projects.Count, StringFormat=' ({0} 个项目)'}"
                         Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}}" />
                 </StackPanel>
+
+                <!--  全选/取消全选  -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <AduSkin:AduButton
+                        Width="80"
+                        Margin="0,0,8,0"
+                        Command="{Binding SelectAllCommand}"
+                        Content="全选" />
+                    <AduSkin:AduButton
+                        Width="80"
+                        Margin="0,0,8,0"
+                        Command="{Binding SelectNoneCommand}"
+                        Content="取消全选" />
+                    <AduSkin:AduButton
+                        Width="80"
+                        Command="{Binding RefreshStatusCommand}"
+                        Content="刷新状态" />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -124,7 +124,7 @@
         <Border
             Grid.Row="2"
             Margin="10"
-            Padding="15"
+            Padding="6"
             Background="White"
             BorderBrush="{DynamicResource NormalBorderBrush}"
             BorderThickness="1"
@@ -202,7 +202,7 @@
                             <Setter Property="AduAttach:PathDataAttach.Margin" Value="0" />
                         </Style>
                     </ScrollViewer.Resources>
-                    <ItemsControl Margin="10,0" ItemsSource="{Binding Projects}">
+                    <ItemsControl Margin="4" ItemsSource="{Binding Projects}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <AduSkin:AduExpander
@@ -458,7 +458,7 @@
             </Grid.ColumnDefinitions>
 
             <!--  日志输出  -->
-            <AduSkin:AduGroupBox>
+            <AduSkin:AduGroupBox VerticalContentAlignment="Stretch">
                 <AduSkin:AduGroupBox.Header>
                     <Grid>
                         <TextBlock VerticalAlignment="Center" Text="输出日志" />
@@ -518,7 +518,7 @@
 
         <!--  加载中遮罩  -->
         <Border
-            Grid.RowSpan="4"
+            Grid.RowSpan="5"
             Background="#80000000"
             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using AduSkin.Controls;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
@@ -261,7 +262,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = SelectedProjects.ToList();
             if (!selectedProjects.Any())
             {
-                MessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -343,7 +344,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = SelectedProjects.Where(p => p.IsDotNetProject).ToList();
             if (!selectedProjects.Any())
             {
-                MessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -352,7 +353,7 @@ namespace DotNetBuilder.ViewModels
             if (projectsWithoutMSBuild.Any())
             {
                 var names = string.Join(", ", projectsWithoutMSBuild.Select(p => p.Name));
-                MessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -475,7 +476,7 @@ namespace DotNetBuilder.ViewModels
             catch (Exception ex)
             {
                 LogOutput += $"启动失败: {ex.Message}\n";
-                MessageBox.Show($"启动程序失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                AduMessageBox.Show($"启动程序失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -604,7 +605,7 @@ namespace DotNetBuilder.ViewModels
 
             if (project.SelectedMSBuildVersion == null)
             {
-                MessageBox.Show($"请先为 {project.Name} 选择 MSBuild 版本", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduMessageBox.Show($"请先为 {project.Name} 选择 MSBuild 版本", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
