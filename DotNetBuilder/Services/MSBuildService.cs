@@ -441,7 +441,6 @@ namespace DotNetBuilder.Services
                 // 优先使用传入的版本，否则使用服务选中的版本
                 var selectedVersion = version ?? SelectedVersion;
                 var msbuildPath = selectedVersion?.Path ?? "dotnet";
-                string arguments;
                 string buildTarget;
 
                 // 确定构建目标
@@ -461,40 +460,84 @@ namespace DotNetBuilder.Services
                     return result;
                 }
 
-                // 构建参数
+                progress?.Report($"========================================");
+                progress?.Report($"[{project.Name}] 开始构建 (配置: {configuration})");
+                progress?.Report($"使用 MSBuild: {msbuildPath}");
+                progress?.Report($"构建目标: {buildTarget}");
+                progress?.Report($"========================================");
+
+                // 1. 还原 NuGet 包
+                progress?.Report($"[NuGet] 正在还原包...");
+                await RestoreNuGetPackagesAsync(msbuildPath, buildTarget, project.Path, progress);
+
+                // 2. 执行构建
+                string arguments;
                 if (msbuildPath == "dotnet")
                 {
-                    arguments = $"build \"{buildTarget}\" -c {configuration} /p:AllowUnsafeBlocks=true";
+                    arguments = $"build \"{buildTarget}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n";
                 }
                 else
                 {
-                    arguments = $"\"{buildTarget}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false";
+                    arguments = $"\"{buildTarget}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
                 }
 
-                progress?.Report($"[{project.Name}] 开始构建 (配置: {configuration})...");
-                progress?.Report($"使用 MSBuild: {msbuildPath}");
-
-                var output = await RunMSBuildAsync(msbuildPath, arguments, project.Path);
+                progress?.Report($"[Build] 正在编译...");
+                var output = await RunMSBuildAsync(msbuildPath, arguments, project.Path, progress);
 
                 result.Output = output;
+
+                // 解析输出获取错误和警告
+                var errors = ExtractErrors(output);
+                var warnings = ExtractWarnings(output);
+
                 // dotnet build 和 MSBuild 成功输出的判断
-                result.Success = output.Contains("0 Error(s)") ||
-                                 output.Contains("Build succeeded") ||
+                var hasErrors = output.Contains("error CS") || output.Contains("Error(s)") && output.Contains("Error(s) 0") == false;
+                var hasSuccess = output.Contains("Build succeeded") ||
                                  output.Contains("Build SUCCEEDED") ||
                                  output.Contains("成功生成") ||
-                                 (output.Contains("Error(s)") && !output.Contains("Error(s)"));
+                                 (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
+
+                result.Success = hasSuccess && !hasErrors;
                 result.Duration = stopwatch.Elapsed;
 
+                // 3. 显示构建结果摘要
+                progress?.Report($"========================================");
                 if (result.Success)
                 {
                     progress?.Report($"[{project.Name}] 构建成功 (耗时: {result.Duration.TotalSeconds:F1}s)");
+
+                    // 4. 显示输出目录
+                    var outputDirs = FindOutputDirectories(project.Path, configuration);
+                    if (outputDirs.Any())
+                    {
+                        progress?.Report($"[Output] 输出目录:");
+                        foreach (var dir in outputDirs)
+                        {
+                            progress?.Report($"    {dir}");
+                        }
+                    }
+
+                    // 显示生成的 exe 文件
+                    var exeFiles = FindOutputExecutables(project.Path, configuration);
+                    if (exeFiles.Any())
+                    {
+                        progress?.Report($"[Exe] 可执行文件:");
+                        foreach (var exe in exeFiles)
+                        {
+                            progress?.Report($"    {exe}");
+                        }
+                    }
                 }
                 else
                 {
-                    result.ErrorMessage = string.IsNullOrWhiteSpace(ExtractErrors(output)) ? "构建失败，请查看上方日志" : ExtractErrors(output);
+                    result.ErrorMessage = string.IsNullOrWhiteSpace(errors) ? "构建失败，请查看上方日志" : errors;
                     progress?.Report($"[{project.Name}] 构建失败");
-                    progress?.Report(result.ErrorMessage ?? "未知错误");
+                    if (!string.IsNullOrEmpty(errors))
+                    {
+                        progress?.Report($"[Error] {errors}");
+                    }
                 }
+                progress?.Report($"========================================");
             }
             catch (Exception ex)
             {
@@ -507,7 +550,51 @@ namespace DotNetBuilder.Services
             return result;
         }
 
-        private async Task<string> RunMSBuildAsync(string msbuildPath, string arguments, string? workingDirectory = null)
+        /// <summary>
+        /// 还原 NuGet 包
+        /// </summary>
+        private async Task RestoreNuGetPackagesAsync(string msbuildPath, string buildTarget, string workingDirectory, IProgress<string>? progress)
+        {
+            try
+            {
+                string arguments;
+                if (msbuildPath == "dotnet")
+                {
+                    arguments = $"restore \"{buildTarget}\"";
+                }
+                else
+                {
+                    arguments = $"\"{buildTarget}\" /t:Restore /nr:false";
+                }
+
+                var output = await RunMSBuildAsync(msbuildPath, arguments, workingDirectory, null);
+
+                // 检查还原结果
+                if (output.Contains("Restore succeeded") || output.Contains("Restore SUCCEEDED") ||
+                    output.Contains("已成功生成") || output.Contains("0 Error(s)"))
+                {
+                    progress?.Report($"[NuGet] 包还原成功");
+                }
+                else if (output.Contains("Nothing to restore"))
+                {
+                    progress?.Report($"[NuGet] 无需还原的包");
+                }
+                else if (output.Contains("error"))
+                {
+                    progress?.Report($"[NuGet] 包还原有警告或错误，请查看上方日志");
+                }
+                else
+                {
+                    progress?.Report($"[NuGet] 包还原完成");
+                }
+            }
+            catch (Exception ex)
+            {
+                progress?.Report($"[NuGet] 还原异常: {ex.Message}");
+            }
+        }
+
+        private async Task<string> RunMSBuildAsync(string msbuildPath, string arguments, string? workingDirectory = null, IProgress<string>? progress = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -530,6 +617,8 @@ namespace DotNetBuilder.Services
                 if (e.Data != null)
                 {
                     output.AppendLine(e.Data);
+                    // 实时输出日志
+                    progress?.Report(e.Data);
                 }
             };
             process.ErrorDataReceived += (s, e) =>
@@ -537,6 +626,8 @@ namespace DotNetBuilder.Services
                 if (e.Data != null)
                 {
                     output.AppendLine(e.Data);
+                    // 实时输出错误日志
+                    progress?.Report(e.Data);
                 }
             };
 
@@ -554,6 +645,55 @@ namespace DotNetBuilder.Services
             var lines = output.Split('\n');
             var errors = lines.Where(l => l.Contains("error CS") || l.Contains("Error(s)") || l.Contains("error:")).Take(5);
             return string.Join("\n", errors);
+        }
+
+        private string? ExtractWarnings(string output)
+        {
+            var lines = output.Split('\n');
+            var warnings = lines.Where(l => l.Contains("warning CS") || l.Contains("Warning(s)")).Take(3);
+            return string.Join("\n", warnings);
+        }
+
+        /// <summary>
+        /// 查找输出目录
+        /// </summary>
+        public List<string> FindOutputDirectories(string projectPath, string configuration = "Release")
+        {
+            var directories = new List<string>();
+
+            // 常见的输出目录
+            var outputPaths = new[]
+            {
+                Path.Combine(projectPath, "bin", configuration),
+                Path.Combine(projectPath, "bin", configuration, "net*"),
+                Path.Combine(projectPath, "out", configuration),
+                Path.Combine(projectPath, "artifacts", "bin", configuration),
+                Path.Combine(projectPath, "artifacts", configuration),
+            };
+
+            foreach (var pathPattern in outputPaths)
+            {
+                if (pathPattern.Contains("*"))
+                {
+                    var basePath = Path.GetDirectoryName(pathPattern);
+                    var pattern = Path.GetFileName(pathPattern);
+                    if (basePath != null && Directory.Exists(basePath))
+                    {
+                        try
+                        {
+                            var dirs = Directory.GetDirectories(basePath, pattern);
+                            directories.AddRange(dirs);
+                        }
+                        catch { }
+                    }
+                }
+                else if (Directory.Exists(pathPattern))
+                {
+                    directories.Add(pathPattern);
+                }
+            }
+
+            return directories.Distinct().ToList();
         }
 
         /// <summary>

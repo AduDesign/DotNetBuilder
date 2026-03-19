@@ -237,6 +237,24 @@ namespace DotNetBuilder.Models
             }
         }
 
+        private string _configuration = "Release";
+
+        /// <summary>
+        /// 构建类型 (Release / Debug)
+        /// </summary>
+        public string Configuration
+        {
+            get => _configuration;
+            set
+            {
+                if (_configuration != value)
+                {
+                    _configuration = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)

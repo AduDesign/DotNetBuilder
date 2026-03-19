@@ -328,7 +328,7 @@
                                                 </StackPanel>
                                             </Border>
 
-                                            <UniformGrid Columns="2">
+                                            <UniformGrid Columns="3">
                                                 <!--  MSBuild版本选择  -->
                                                 <AduSkin:AduFormBox Margin="0,0,10,0" Header="MSBuild:">
                                                     <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
@@ -338,6 +338,13 @@
                                                             </DataTemplate>
                                                         </AduSkin:AduComboBox.ItemTemplate>
                                                     </AduSkin:AduComboBox>
+                                                </AduSkin:AduFormBox>
+                                                <!--  构建类型选择  -->
+                                                <AduSkin:AduFormBox
+                                                    Margin="0,0,10,0"
+                                                    Header="Config:"
+                                                    Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <AduSkin:AduComboBox ItemsSource="{Binding DataContext.ConfigurationTypes, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding Configuration}" />
                                                 </AduSkin:AduFormBox>
                                                 <!--  执行文件路径  -->
                                                 <AduSkin:AduFormBox Header="ExecuteFile:">

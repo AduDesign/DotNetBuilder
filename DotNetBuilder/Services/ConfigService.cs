@@ -42,7 +42,8 @@ namespace DotNetBuilder.Services
                         Path = p.Path,
                         IsSelected = p.IsSelected,
                         ExecuteFile = p.ExecuteFile,
-                        SelectedMSBuildVersion = p.SelectedMSBuildVersion?.DisplayName
+                        SelectedMSBuildVersion = p.SelectedMSBuildVersion?.DisplayName,
+                        Configuration = p.Configuration
                     }).ToList()
                 };
 
@@ -98,5 +99,6 @@ namespace DotNetBuilder.Services
         public bool IsSelected { get; set; } = true;
         public string? ExecuteFile { get; set; }
         public string? SelectedMSBuildVersion { get; set; }
+        public string Configuration { get; set; } = "Release";
     }
 }

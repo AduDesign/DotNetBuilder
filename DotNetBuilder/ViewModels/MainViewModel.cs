@@ -64,6 +64,8 @@ namespace DotNetBuilder.ViewModels
 
         public ObservableCollection<string> Executables { get; } = new();
 
+        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Release", "Debug" };
+
         public string SelectedPath
         {
             get => _selectedPath;
@@ -396,8 +398,8 @@ namespace DotNetBuilder.ViewModels
 
                     try
                     {
-                        LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}\n";
-                        var result = await _msbuildService.BuildProjectAsync(project, "Release", project.SelectedMSBuildVersion, progress);
+                        LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}, 配置: {project.Configuration}\n";
+                        var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
                         if (result.Success)
                         {
@@ -501,6 +503,7 @@ namespace DotNetBuilder.ViewModels
                     {
                         project.IsSelected = projectConfig.IsSelected;
                         project.ExecuteFile = projectConfig.ExecuteFile ?? string.Empty;
+                        project.Configuration = projectConfig.Configuration;
 
                         // 恢复 MSBuild 版本
                         if (!string.IsNullOrEmpty(projectConfig.SelectedMSBuildVersion))
@@ -684,8 +687,8 @@ namespace DotNetBuilder.ViewModels
                     LogOutput += $"[{project.Name}] {msg}\n";
                 });
 
-                LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}\n";
-                var result = await _msbuildService.BuildProjectAsync(project, "Release", project.SelectedMSBuildVersion, progress);
+                LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n";
+                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
                 if (result.Success)
                 {
