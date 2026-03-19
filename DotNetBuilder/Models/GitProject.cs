@@ -13,6 +13,9 @@ namespace DotNetBuilder.Models
         private bool _hasChanges;
         private int _changesCount;
         private int _sortOrder;
+        private bool _isSyncing;
+        private bool _isBuilding;
+        private string _errorMessage = string.Empty;
 
         /// <summary>
         /// 项目名称
@@ -106,6 +109,68 @@ namespace DotNetBuilder.Models
                     OnPropertyChanged();
                 }
             }
+        }
+
+        /// <summary>
+        /// 是否正在同步代码
+        /// </summary>
+        public bool IsSyncing
+        {
+            get => _isSyncing;
+            set
+            {
+                if (_isSyncing != value)
+                {
+                    _isSyncing = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否正在构建
+        /// </summary>
+        public bool IsBuilding
+        {
+            get => _isBuilding;
+            set
+            {
+                if (_isBuilding != value)
+                {
+                    _isBuilding = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 错误信息
+        /// </summary>
+        public string ErrorMessage
+        {
+            get => _errorMessage;
+            set
+            {
+                if (_errorMessage != value)
+                {
+                    _errorMessage = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(HasError));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否有错误
+        /// </summary>
+        public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+        /// <summary>
+        /// 清除错误状态
+        /// </summary>
+        public void ClearError()
+        {
+            ErrorMessage = string.Empty;
         }
 
         /// <summary>

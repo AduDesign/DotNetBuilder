@@ -55,14 +55,19 @@
                 <!--  全选/取消全选  -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <AduSkin:AduButton
+                        Width="80"
                         Margin="0,0,8,0"
                         Command="{Binding SelectAllCommand}"
                         Content="全选" />
                     <AduSkin:AduButton
+                        Width="80"
                         Margin="0,0,8,0"
                         Command="{Binding SelectNoneCommand}"
                         Content="取消全选" />
-                    <AduSkin:AduButton Command="{Binding RefreshStatusCommand}" Content="刷新状态" />
+                    <AduSkin:AduButton
+                        Width="80"
+                        Command="{Binding RefreshStatusCommand}"
+                        Content="刷新状态" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -84,6 +89,7 @@
                 <!--  目录选择  -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <AduSkin:AduButton
+                        Width="80"
                         Margin="0,0,15,0"
                         Command="{Binding SelectDirectoryCommand}"
                         Content="选择目录" />
@@ -180,13 +186,25 @@
                     Grid.Row="1"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer.Resources>
+                        <Style BasedOn="{StaticResource AduPathIconButton}" TargetType="AduSkin:AduPathIconButton">
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Margin" Value="0,0,5,0" />
+                            <Setter Property="Width" Value="24" />
+                            <Setter Property="Height" Value="24" />
+                            <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
+                            <Setter Property="AduAttach:PathBrushAttach.NormalPathBrush" Value="#0078D4" />
+                            <Setter Property="AduAttach:PathDataAttach.Width" Value="8" />
+                            <Setter Property="AduAttach:PathDataAttach.Margin" Value="0" />
+                        </Style>
+                    </ScrollViewer.Resources>
                     <ItemsControl Margin="10,0" ItemsSource="{Binding Projects}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <AduSkin:AduExpander
                                     x:Name="ItemBorder"
                                     Margin="0,0,0,8"
-                                    Padding="12,10"
+                                    Padding="12,4"
                                     BorderThickness="2"
                                     IsExpanded="{Binding IsExpanded}">
                                     <AduSkin:AduExpander.Header>
@@ -240,7 +258,24 @@
                                                 Grid.Column="3"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center">
+                                                <!--  同步中/构建中状态  -->
                                                 <TextBlock
+                                                    x:Name="txtSyncingStatus"
+                                                    HorizontalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#0078D4"
+                                                    Text="同步中..."
+                                                    Visibility="Collapsed" />
+                                                <TextBlock
+                                                    x:Name="txtBuildingStatus"
+                                                    HorizontalAlignment="Center"
+                                                    FontSize="10"
+                                                    Foreground="#0078D4"
+                                                    Text="构建中..."
+                                                    Visibility="Collapsed" />
+                                                <!--  正常状态显示更改数  -->
+                                                <TextBlock
+                                                    x:Name="txtChangesCount"
                                                     HorizontalAlignment="Center"
                                                     FontSize="12"
                                                     FontWeight="Bold"
@@ -248,38 +283,78 @@
                                                     Text="{Binding ChangesCount, Converter={StaticResource ChangesCountConverter}}" />
                                             </StackPanel>
 
-                                            <!--  排序按钮  -->
+                                            <!--  操作按钮  -->
                                             <StackPanel
                                                 Grid.Column="4"
-                                                HorizontalAlignment="Center"
+                                                HorizontalAlignment="Left"
                                                 VerticalAlignment="Center"
                                                 Orientation="Horizontal">
                                                 <AduSkin:AduPathIconButton
                                                     Margin="0,0,5,0"
-                                                    AduAttach:BorderAttach.CornerRadius="10"
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
                                                     AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Up}"
-                                                    AduAttach:PathDataAttach.Width="8"
                                                     BorderThickness="1"
                                                     Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="12"
                                                     ToolTip="上移" />
                                                 <AduSkin:AduPathIconButton
-                                                    AduAttach:BorderAttach.CornerRadius="10"
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
+                                                    Margin="0,0,5,0"
                                                     AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Down}"
-                                                    AduAttach:PathDataAttach.Width="8"
                                                     BorderThickness="1"
                                                     Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="12"
                                                     ToolTip="下移" />
+                                                <!--  单独同步按钮  -->
+                                                <AduSkin:AduPathIconButton
+                                                    Margin="0,0,5,0"
+                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
+                                                    AduAttach:PathDataAttach.Width="12"
+                                                    Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    FontSize="10"
+                                                    ToolTip="单独同步此项目" />
+                                                <!--  单独构建按钮  -->
+                                                <AduSkin:AduPathIconButton
+                                                    AduAttach:PathBrushAttach.NormalPathBrush="Green"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
+                                                    AduAttach:PathDataAttach.Width="9"
+                                                    Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    FontSize="10"
+                                                    ToolTip="单独构建此项目"
+                                                    Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}" />
                                             </StackPanel>
                                         </Grid>
                                     </AduSkin:AduExpander.Header>
                                     <AduSkin:AduExpander.Content>
-                                        <StackPanel Margin="0,10,0,0">
+                                        <StackPanel Margin="0,4,0,0">
+                                            <!--  错误信息显示  -->
+                                            <Border
+                                                x:Name="ErrorPanel"
+                                                Margin="0,0,0,10"
+                                                Padding="10"
+                                                Background="#FFF0F0"
+                                                BorderBrush="#FF4444"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                Visibility="Collapsed">
+                                                <StackPanel>
+                                                    <TextBlock
+                                                        FontWeight="Bold"
+                                                        Foreground="#CC0000"
+                                                        Text="错误信息:" />
+                                                    <TextBlock
+                                                        Margin="0,5,0,0"
+                                                        FontFamily="Consolas"
+                                                        FontSize="11"
+                                                        Foreground="#CC0000"
+                                                        Text="{Binding ErrorMessage}"
+                                                        TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+
                                             <!--  MSBuild版本选择  -->
                                             <AduSkin:AduFormBox Header="MSBuild:">
                                                 <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
@@ -290,7 +365,7 @@
                                                     </AduSkin:AduComboBox.ItemTemplate>
                                                 </AduSkin:AduComboBox>
                                             </AduSkin:AduFormBox>
-                                            <Grid Margin="0,10,0,0">
+                                            <Grid Margin="0,4,0,0">
                                                 <TextBlock
                                                     x:Name="txtNotChange"
                                                     Margin="0,10"
@@ -309,6 +384,8 @@
                                                     <AduSkin:AduTextBox
                                                         Grid.Column="1"
                                                         Height="50"
+                                                        Padding="4"
+                                                        VerticalContentAlignment="Top"
                                                         Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"
                                                         ToolTip="输入该项目的提交信息" />
                                                 </AduSkin:AduFormBox>
@@ -318,12 +395,28 @@
                                     </AduSkin:AduExpander.Content>
                                 </AduSkin:AduExpander>
                                 <DataTemplate.Triggers>
+                                    <!--  有错误时红色边框并显示错误信息  -->
+                                    <DataTrigger Binding="{Binding HasError}" Value="True">
+                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FF4444" />
+                                        <Setter TargetName="ErrorPanel" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <!--  有更改时橙色边框  -->
                                     <DataTrigger Binding="{Binding HasChanges}" Value="True">
                                         <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FFA500" />
                                         <Setter TargetName="ChangePanel" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding HasChanges}" Value="False">
                                         <Setter TargetName="txtNotChange" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <!--  同步中状态  -->
+                                    <DataTrigger Binding="{Binding IsSyncing}" Value="True">
+                                        <Setter TargetName="txtSyncingStatus" Property="Visibility" Value="Visible" />
+                                        <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                    <!--  构建中状态  -->
+                                    <DataTrigger Binding="{Binding IsBuilding}" Value="True">
+                                        <Setter TargetName="txtBuildingStatus" Property="Visibility" Value="Visible" />
+                                        <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </DataTemplate.Triggers>
                             </DataTemplate>

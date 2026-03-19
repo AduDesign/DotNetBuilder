@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using DotNetBuilder.Models;
@@ -39,6 +40,10 @@ namespace DotNetBuilder.ViewModels
             SelectNoneCommand = new RelayCommand(SelectNone);
             ClearLogCommand = new RelayCommand(_ => LogOutput = string.Empty);
             RefreshStatusCommand = new AsyncRelayCommand(RefreshStatusAsync);
+
+            // 单个项目操作命令
+            SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
+            BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
 
             // 加载MSBuild版本
             LoadMSBuildVersions();
@@ -128,6 +133,8 @@ namespace DotNetBuilder.ViewModels
         public ICommand SelectNoneCommand { get; }
         public ICommand ClearLogCommand { get; }
         public ICommand RefreshStatusCommand { get; }
+        public ICommand SyncSingleCommand { get; }
+        public ICommand BuildSingleCommand { get; }
 
         #endregion
 
@@ -263,25 +270,61 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var progress = new Progress<string>(msg =>
+                // 并行同步所有项目
+                var tasks = selectedProjects.Select(async project =>
                 {
-                    LogOutput += msg + "\n";
+                    // 设置同步状态
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        project.ClearError();
+                        project.IsSyncing = true;
+                        project.IsExpanded = true; // 自动展开
+                    });
+
+                    try
+                    {
+                        var progress = new Progress<string>(msg =>
+                        {
+                            LogOutput += $"[{project.Name}] {msg}\n";
+                        });
+
+                        await _gitService.UpdateProjectStatusAsync(project);
+                        var commitMsg = project.CommitMessage;
+                        var result = await _gitService.SyncProjectAsync(project, commitMsg, progress);
+
+                        if (result.Success)
+                        {
+                            await _gitService.UpdateProjectStatusAsync(project);
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.IsExpanded = false; // 成功则收起
+                            });
+                        }
+                        else
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.ErrorMessage = result.Message;
+                                project.IsExpanded = true; // 失败则保持展开
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogOutput += $"[{project.Name}] 同步异常: {ex.Message}\n";
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
+                    }
                 });
 
-                foreach (var project in selectedProjects.OrderBy(p => p.SortOrder))
-                {
-                    await _gitService.UpdateProjectStatusAsync(project);
-
-                    // 使用每个项目自己输入的提交信息
-                    var commitMsg = project.CommitMessage;
-
-                    var result = await _gitService.SyncProjectAsync(project, commitMsg, progress);
-
-                    if (result.Success)
-                    {
-                        await _gitService.UpdateProjectStatusAsync(project);
-                    }
-                }
+                await Task.WhenAll(tasks);
 
                 LogOutput += $"\n========== 同步完成 ==========\n";
             }
@@ -323,18 +366,60 @@ namespace DotNetBuilder.ViewModels
                     LogOutput += msg + "\n";
                 });
 
+                bool buildFailed = false;
                 foreach (var project in selectedProjects.OrderBy(p => p.SortOrder))
                 {
-                    LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}\n";
-                    var result = await _msbuildService.BuildProjectAsync(project, "Release", project.SelectedMSBuildVersion, progress);
-
-                    if (result.Success)
+                    // 如果之前有项目构建失败，跳过后续项目
+                    if (buildFailed)
                     {
-                        LogOutput += $"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n";
+                        LogOutput += $"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n";
+                        continue;
                     }
-                    else
+
+                    // 清除之前的错误
+                    await Application.Current.Dispatcher.InvokeAsync(() => project.ClearError());
+
+                    // 设置构建状态
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        LogOutput += $"[{project.Name}] 构建失败: {result.ErrorMessage}\n";
+                        project.IsBuilding = true;
+                        project.IsExpanded = true; // 自动展开
+                    });
+
+                    try
+                    {
+                        LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}\n";
+                        var result = await _msbuildService.BuildProjectAsync(project, "Release", project.SelectedMSBuildVersion, progress);
+
+                        if (result.Success)
+                        {
+                            LogOutput += $"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n";
+                            await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
+                        }
+                        else
+                        {
+                            LogOutput += $"[{project.Name}] 构建失败: {result.ErrorMessage}\n";
+                            buildFailed = true;
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                                project.IsExpanded = true; // 保持展开显示错误
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogOutput += $"[{project.Name}] 构建异常: {ex.Message}\n";
+                        buildFailed = true;
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsBuilding = false);
                     }
                 }
 
@@ -459,6 +544,110 @@ namespace DotNetBuilder.ViewModels
             foreach (var project in Projects)
             {
                 project.IsSelected = false;
+            }
+        }
+
+        /// <summary>
+        /// 同步单个项目
+        /// </summary>
+        private async Task SyncSingleAsync(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            LogOutput += $"\n========== 同步项目: {project.Name} ==========\n";
+
+            try
+            {
+                project.ClearError();
+                project.IsSyncing = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg =>
+                {
+                    LogOutput += $"[{project.Name}] {msg}\n";
+                });
+
+                await _gitService.UpdateProjectStatusAsync(project);
+                var result = await _gitService.SyncProjectAsync(project, project.CommitMessage, progress);
+
+                if (result.Success)
+                {
+                    await _gitService.UpdateProjectStatusAsync(project);
+                    project.IsExpanded = false;
+                    LogOutput += $"[{project.Name}] 同步成功\n";
+                }
+                else
+                {
+                    project.ErrorMessage = result.Message;
+                    LogOutput += $"[{project.Name}] 同步失败: {result.Message}\n";
+                }
+            }
+            catch (Exception ex)
+            {
+                LogOutput += $"[{project.Name}] 同步异常: {ex.Message}\n";
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsSyncing = false;
+            }
+        }
+
+        /// <summary>
+        /// 构建单个项目
+        /// </summary>
+        private async Task BuildSingleAsync(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            if (project.SelectedMSBuildVersion == null)
+            {
+                MessageBox.Show($"请先为 {project.Name} 选择 MSBuild 版本", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            LogOutput += $"\n========== 构建项目: {project.Name} ==========\n";
+
+            try
+            {
+                project.ClearError();
+                project.IsBuilding = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg =>
+                {
+                    LogOutput += $"[{project.Name}] {msg}\n";
+                });
+
+                LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}\n";
+                var result = await _msbuildService.BuildProjectAsync(project, "Release", project.SelectedMSBuildVersion, progress);
+
+                if (result.Success)
+                {
+                    project.IsExpanded = false;
+                    LogOutput += $"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n";
+                    // 如果当前选中的是这个项目，刷新exe列表
+                    if (SelectedProject == project)
+                    {
+                        LoadProjectExecutables();
+                    }
+                }
+                else
+                {
+                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                    LogOutput += $"[{project.Name}] 构建失败: {result.ErrorMessage}\n";
+                }
+            }
+            catch (Exception ex)
+            {
+                LogOutput += $"[{project.Name}] 构建异常: {ex.Message}\n";
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsBuilding = false;
             }
         }
 
