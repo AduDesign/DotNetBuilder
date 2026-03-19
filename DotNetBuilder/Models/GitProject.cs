@@ -219,6 +219,24 @@ namespace DotNetBuilder.Models
             }
         }
 
+        private string _executeFile = string.Empty;
+
+        /// <summary>
+        /// 该项目选择的可执行程序路径
+        /// </summary>
+        public string ExecuteFile
+        {
+            get => _executeFile;
+            set
+            {
+                if (_executeFile != value)
+                {
+                    _executeFile = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
