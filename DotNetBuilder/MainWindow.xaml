@@ -6,16 +6,14 @@
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:local="clr-namespace:DotNetBuilder"
-    Title=".NET 项目管理器"
-    Width="1000"
+    Title=".NET Project Manager"
+    Width="800"
     Height="700"
-    MinWidth="800"
+    MinWidth="600"
     MinHeight="600"
     WindowStartupLocation="CenterScreen">
-
-    <Grid Background="#F5F5F5">
+    <Grid Background="{DynamicResource PanelBackground}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
@@ -25,42 +23,8 @@
                 MaxHeight="400" />
         </Grid.RowDefinitions>
 
-        <!--  顶部标题栏  -->
-        <Border
-            Grid.Row="0"
-            Padding="20,15"
-            Background="White"
-            BorderBrush="#E0E0E0"
-            BorderThickness="0,0,0,1">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <StackPanel
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Orientation="Horizontal">
-                    <Path
-                        Width="28"
-                        Margin="0,0,10,0"
-                        VerticalAlignment="Center"
-                        Data="{DynamicResource Icon_Build}"
-                        Fill="#0078D4" />
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        FontSize="20"
-                        FontWeight="SemiBold"
-                        Foreground="#333"
-                        Text=".NET 项目管理器" />
-                </StackPanel>
-            </Grid>
-        </Border>
-
         <!--  工具栏  -->
         <Border
-            Grid.Row="1"
             Padding="10"
             Background="White"
             BorderBrush="#E0E0E0"
@@ -122,7 +86,7 @@
 
         <!--  主内容区域 - 项目列表  -->
         <Border
-            Grid.Row="2"
+            Grid.Row="1"
             Margin="10"
             Padding="6"
             Background="White"
@@ -359,16 +323,22 @@
                                                 </StackPanel>
                                             </Border>
 
-                                            <!--  MSBuild版本选择  -->
-                                            <AduSkin:AduFormBox Header="MSBuild:">
-                                                <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
-                                                    <AduSkin:AduComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding DisplayName}" />
-                                                        </DataTemplate>
-                                                    </AduSkin:AduComboBox.ItemTemplate>
-                                                </AduSkin:AduComboBox>
-                                            </AduSkin:AduFormBox>
+                                            <UniformGrid Columns="2">
+                                                <!--  MSBuild版本选择  -->
+                                                <AduSkin:AduFormBox Margin="0,0,10,0" Header="MSBuild:">
+                                                    <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
+                                                        <AduSkin:AduComboBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding DisplayName}" />
+                                                            </DataTemplate>
+                                                        </AduSkin:AduComboBox.ItemTemplate>
+                                                    </AduSkin:AduComboBox>
+                                                </AduSkin:AduFormBox>
+                                                <!--  执行文件路径  -->
+                                                <AduSkin:AduFormBox Header="ExecuteFile:">
+                                                    <AduSkin:AduChooseBox Text="{Binding ExecuteFile}" />
+                                                </AduSkin:AduFormBox>
+                                            </UniformGrid>
                                             <Grid Margin="0,4,0,0">
                                                 <TextBlock
                                                     x:Name="txtNotChange"
@@ -383,7 +353,7 @@
                                                     x:Name="ChangePanel"
                                                     Margin="0,0,0,0"
                                                     AduAttach:HeaderAttach.VerticalAlignment="Top"
-                                                    Header="提交信息:"
+                                                    Header="Commit: "
                                                     Visibility="Collapsed">
                                                     <AduSkin:AduTextBox
                                                         Grid.Column="1"
@@ -449,16 +419,47 @@
             </Grid>
         </Border>
 
-        <AduSkin:AduGridSplitter Grid.Row="3" ResizeDirection="Rows" />
+        <AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
         <!--  底部区域  -->
-        <Grid Grid.Row="4" Margin="20,10,20,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <Grid Grid.Row="3" Margin="20,10,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!--  右侧操作按钮  -->
+            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                <AduSkin:AduFormBox Header="运行项目">
+                    <AduSkin:AduComboBox
+                        Width="100"
+                        ItemsSource="{Binding Executables}"
+                        SelectedItem="{Binding SelectedExecutable}" />
+                </AduSkin:AduFormBox>
+                <!--  主操作按钮  -->
+                <AduSkin:AduButton
+                    Width="Auto"
+                    Margin="10,0,0,0"
+                    Padding="10,0"
+                    Command="{Binding SyncSelectedCommand}"
+                    Content="Git 同步" />
+
+                <AduSkin:AduButton
+                    Width="Auto"
+                    Margin="10,0,0,0"
+                    Padding="10,0"
+                    Command="{Binding BuildSelectedCommand}"
+                    Content="MSBuild 构建" />
+
+                <AduSkin:AduButton
+                    Width="Auto"
+                    Margin="10,0,0,0"
+                    Padding="10,0"
+                    Command="{Binding RunSelectedCommand}"
+                    Content="运行程序" />
+            </StackPanel>
 
             <!--  日志输出  -->
-            <AduSkin:AduGroupBox VerticalContentAlignment="Stretch">
+            <AduSkin:AduGroupBox Grid.Row="1" VerticalContentAlignment="Stretch">
                 <AduSkin:AduGroupBox.Header>
                     <Grid>
                         <TextBlock VerticalAlignment="Center" Text="输出日志" />
@@ -487,38 +488,11 @@
                     VerticalScrollBarVisibility="Auto" />
             </AduSkin:AduGroupBox>
 
-            <!--  右侧操作按钮  -->
-            <StackPanel
-                Grid.Column="1"
-                Width="150"
-                Margin="15,0,0,0">
-                <AduSkin:AduComboBox
-                    Margin="0,0,0,10"
-                    ItemsSource="{Binding Executables}"
-                    SelectedItem="{Binding SelectedExecutable}" />
-                <!--  主操作按钮  -->
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="0,0,0,10"
-                    Command="{Binding SyncSelectedCommand}"
-                    Content="Git 同步" />
-
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="0,0,0,10"
-                    Command="{Binding BuildSelectedCommand}"
-                    Content="MSBuild 构建" />
-
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Command="{Binding RunSelectedCommand}"
-                    Content="运行程序" />
-            </StackPanel>
         </Grid>
 
         <!--  加载中遮罩  -->
         <Border
-            Grid.RowSpan="5"
+            Grid.RowSpan="4"
             Background="#80000000"
             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
