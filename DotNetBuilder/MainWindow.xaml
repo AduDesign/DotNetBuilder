@@ -18,7 +18,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="200" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition
+                Height="200"
+                MinHeight="200"
+                MaxHeight="400" />
         </Grid.RowDefinitions>
 
         <!--  顶部标题栏  -->
@@ -119,7 +123,7 @@
         <!--  主内容区域 - 项目列表  -->
         <Border
             Grid.Row="2"
-            Margin="20,15"
+            Margin="10"
             Padding="15"
             Background="White"
             BorderBrush="{DynamicResource NormalBorderBrush}"
@@ -445,48 +449,43 @@
             </Grid>
         </Border>
 
+        <AduSkin:AduGridSplitter Grid.Row="3" ResizeDirection="Rows" />
         <!--  底部区域  -->
-        <Grid Grid.Row="3" Margin="20,0,20,20">
+        <Grid Grid.Row="4" Margin="20,10,20,20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!--  日志输出  -->
-            <Border
-                Grid.Column="0"
-                Padding="15"
-                BorderBrush="{DynamicResource NormalBorderBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Grid Grid.Row="0" Margin="0,0,0,10">
-                        <TextBlock FontWeight="SemiBold" Text="输出日志" />
+            <AduSkin:AduGroupBox>
+                <AduSkin:AduGroupBox.Header>
+                    <Grid>
+                        <TextBlock VerticalAlignment="Center" Text="输出日志" />
                         <AduSkin:AduButton
-                            Padding="10,3"
+                            Width="40"
+                            Height="Auto"
                             HorizontalAlignment="Right"
+                            Background="Transparent"
+                            BorderThickness="0"
                             Command="{Binding ClearLogCommand}"
                             Content="清空"
-                            FontSize="11" />
+                            FontSize="11"
+                            Foreground="{DynamicResource PrimaryBrush}" />
                     </Grid>
+                </AduSkin:AduGroupBox.Header>
 
-                    <AduSkin:AduScrollViewer
-                        Grid.Row="1"
-                        HorizontalScrollBarVisibility="Auto"
-                        VerticalScrollBarVisibility="Auto">
-                        <TextBlock
-                            FontFamily="Consolas"
-                            FontSize="12"
-                            Text="{Binding LogOutput}"
-                            TextWrapping="Wrap" />
-                    </AduSkin:AduScrollViewer>
-                </Grid>
-            </Border>
+                <AduSkin:AduTextBox
+                    Height="Auto"
+                    VerticalAlignment="Stretch"
+                    AduAttach:BorderAttach.CornerRadius="0,0,6,6"
+                    BorderThickness="0"
+                    FontSize="10"
+                    IsReadOnly="True"
+                    Text="{Binding LogOutput}"
+                    TextWrapping="Wrap"
+                    VerticalScrollBarVisibility="Auto" />
+            </AduSkin:AduGroupBox>
 
             <!--  右侧操作按钮  -->
             <StackPanel
