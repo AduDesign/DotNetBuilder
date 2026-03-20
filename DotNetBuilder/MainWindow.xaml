@@ -148,7 +148,7 @@
                     Grid.Row="1"
                     Padding="0,4"
                     AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
-                    AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush10}"
+                    AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush05}"
                     ItemsSource="{Binding Projects}"
                     SelectedItem="{Binding SelectedItem}">
                     <AduSkin:AduListBox.Resources>
@@ -176,6 +176,18 @@
                             <AduSkin:AduMenuItem Header="打开目录" />
                             <AduSkin:AduMenuItem Header="VisualStudio 打开" />
                             <AduSkin:AduMenuItem Header="VisualStudio Code 打开" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding BuildSingleCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="构建" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding SyncSingleCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="同步" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding RemoveProjectCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="删除" />
                         </AduSkin:AduContextMenu>
                     </AduSkin:AduListBox.ContextMenu>
                     <AduSkin:AduListBox.ItemTemplate>
@@ -193,7 +205,7 @@
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="80" />
                                             <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="120" />
                                         </Grid.ColumnDefinitions>
 
                                         <!--  勾选框  -->
@@ -327,15 +339,6 @@
                                                     IsActived="{Binding IsBuilding}"
                                                     Type="Apple" />
                                             </Grid>
-                                            <!--  移除项目按钮  -->
-                                            <AduSkin:AduPathIconButton
-                                                AduAttach:PathBrushAttach.NormalPathBrush="#FF4444"
-                                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Delete}"
-                                                AduAttach:PathDataAttach.Width="11"
-                                                Command="{Binding DataContext.RemoveProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                FontSize="10"
-                                                ToolTip="移除此项目" />
                                         </StackPanel>
                                     </Grid>
                                 </AduSkin:AduExpander.Header>
