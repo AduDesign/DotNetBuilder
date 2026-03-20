@@ -79,6 +79,18 @@ namespace DotNetBuilder.ViewModels
 
         public ObservableCollection<GitProject> Projects { get; } = new();
 
+        private GitProject _selectedItem;
+
+        public GitProject SelectedItem
+        {
+            get { return _selectedItem; }
+            set
+            {
+                _selectedItem = value;
+                OnPropertyChanged();
+            }
+        } 
+
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
 
         public ObservableCollection<string> Executables { get; } = new();
