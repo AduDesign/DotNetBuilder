@@ -526,14 +526,14 @@
                     Margin="10,0,0,0"
                     Padding="10,0"
                     Command="{Binding SyncSelectedCommand}"
-                    Content="Git 同步" />
+                    Content="一键Git同步" />
 
                 <AduSkin:AduButton
                     Width="Auto"
                     Margin="10,0,0,0"
                     Padding="10,0"
                     Command="{Binding BuildSelectedCommand}"
-                    Content="MSBuild 构建" />
+                    Content="一键构建" />
 
                 <AduSkin:AduButton
                     Width="Auto"
@@ -638,7 +638,7 @@
                     Margin="0,15,0,0"
                     HorizontalAlignment="Center"
                     FontSize="14"
-                    Foreground="White"
+                    Foreground="{DynamicResource PrimaryBrush}"
                     Text="处理中..." />
             </StackPanel>
         </Border>
