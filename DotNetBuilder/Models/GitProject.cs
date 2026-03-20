@@ -15,6 +15,7 @@ namespace DotNetBuilder.Models
         private int _sortOrder;
         private bool _isSyncing;
         private bool _isBuilding;
+        private bool _isRemoved;
         private string _errorMessage = string.Empty;
 
         /// <summary>
@@ -138,6 +139,22 @@ namespace DotNetBuilder.Models
                 if (_isBuilding != value)
                 {
                     _isBuilding = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 是否已从列表移除（移除后保存将不再加载）
+        /// </summary>
+        public bool IsRemoved
+        {
+            get => _isRemoved;
+            set
+            {
+                if (_isRemoved != value)
+                {
+                    _isRemoved = value;
                     OnPropertyChanged();
                 }
             }

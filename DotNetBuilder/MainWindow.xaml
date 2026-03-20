@@ -7,8 +7,8 @@
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:local="clr-namespace:DotNetBuilder"
     Title=".NET Project Manager"
-    Width="800"
-    Height="700"
+    Width="600"
+    Height="900"
     MinWidth="600"
     MinHeight="600"
     WindowStartupLocation="CenterScreen">
@@ -117,7 +117,7 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="144" />
                         </Grid.ColumnDefinitions>
 
                         <TextBlock
@@ -187,7 +187,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="80" />
                                                 <ColumnDefinition Width="80" />
-                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="150" />
                                             </Grid.ColumnDefinitions>
 
                                             <!--  勾选框  -->
@@ -290,6 +290,7 @@
                                                     ToolTip="单独同步此项目" />
                                                 <!--  单独构建按钮  -->
                                                 <AduSkin:AduPathIconButton
+                                                    Margin="0,0,5,0"
                                                     AduAttach:PathBrushAttach.NormalPathBrush="Green"
                                                     AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
                                                     AduAttach:PathDataAttach.Width="9"
@@ -298,6 +299,15 @@
                                                     FontSize="10"
                                                     ToolTip="单独构建此项目"
                                                     Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                <!--  移除项目按钮  -->
+                                                <AduSkin:AduPathIconButton
+                                                    AduAttach:PathBrushAttach.NormalPathBrush="#FF4444"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Delete}"
+                                                    AduAttach:PathDataAttach.Width="11"
+                                                    Command="{Binding DataContext.RemoveProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"
+                                                    FontSize="10"
+                                                    ToolTip="移除此项目（保存后将不再加载）" />
                                             </StackPanel>
                                         </Grid>
                                     </AduSkin:AduExpander.Header>

@@ -48,6 +48,7 @@ namespace DotNetBuilder.ViewModels
             // 单个项目操作命令
             SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
             BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
+            RemoveProjectCommand = new RelayCommand(RemoveProject);
 
             // 加载MSBuild版本
             LoadMSBuildVersions();
@@ -145,6 +146,7 @@ namespace DotNetBuilder.ViewModels
         public ICommand SyncSingleCommand { get; }
         public ICommand BuildSingleCommand { get; }
         public ICommand SaveConfigCommand { get; }
+        public ICommand RemoveProjectCommand { get; }
 
         #endregion
 
@@ -495,8 +497,26 @@ namespace DotNetBuilder.ViewModels
                 LogOutput += $"正在加载上次配置...\n";
                 await ScanProjectsAsync();
 
-                // 应用项目配置
-                foreach (var projectConfig in config.Projects)
+                // 收集已移除的项目路径
+                var removedPaths = config.Projects
+                    .Where(p => p.IsRemoved)
+                    .Select(p => p.Path)
+                    .ToHashSet();
+
+                // 移除已标记为移除的项目
+                var toRemove = Projects.Where(p => removedPaths.Contains(p.Path)).ToList();
+                foreach (var project in toRemove)
+                {
+                    Projects.Remove(project);
+                }
+
+                // 应用项目配置（按Order排序）
+                var sortedConfigs = config.Projects
+                    .Where(p => !p.IsRemoved)  // 跳过已移除的项目
+                    .OrderBy(p => p.Order)
+                    .ToList();
+
+                foreach (var projectConfig in sortedConfigs)
                 {
                     var project = Projects.FirstOrDefault(p => p.Path == projectConfig.Path);
                     if (project != null)
@@ -504,6 +524,8 @@ namespace DotNetBuilder.ViewModels
                         project.IsSelected = projectConfig.IsSelected;
                         project.ExecuteFile = projectConfig.ExecuteFile ?? string.Empty;
                         project.Configuration = projectConfig.Configuration;
+                        project.SortOrder = projectConfig.Order;
+                        project.IsRemoved = false; // 重置移除状态
 
                         // 恢复 MSBuild 版本
                         if (!string.IsNullOrEmpty(projectConfig.SelectedMSBuildVersion))
@@ -511,6 +533,19 @@ namespace DotNetBuilder.ViewModels
                             project.SelectedMSBuildVersion = MSBuildVersions.FirstOrDefault(v => v.DisplayName == projectConfig.SelectedMSBuildVersion);
                         }
                     }
+                }
+
+                // 按Order重新排序Projects集合
+                var sorted = Projects.OrderBy(p => p.SortOrder).ToList();
+                Projects.Clear();
+                foreach (var project in sorted)
+                {
+                    Projects.Add(project);
+                }
+
+                if (removedPaths.Count > 0)
+                {
+                    LogOutput += $"已跳过 {removedPaths.Count} 个已移除的项目\n";
                 }
 
                 LogOutput += $"配置加载完成\n";
@@ -610,6 +645,26 @@ namespace DotNetBuilder.ViewModels
             foreach (var project in Projects)
             {
                 project.IsSelected = false;
+            }
+        }
+
+        /// <summary>
+        /// 移除项目（标记为已移除，保存后将不再加载）
+        /// </summary>
+        private void RemoveProject(object? parameter)
+        {
+            if (parameter is GitProject project)
+            {
+                project.IsSelected = false; // 取消选中
+                project.IsRemoved = true;   // 标记为已移除
+                Projects.Remove(project);    // 从列表移除
+                LogOutput += $"已移除项目: {project.Name}\n";
+
+                // 如果移除的是当前选中的项目，清空选择
+                if (SelectedProject == project)
+                {
+                    SelectedProject = null;
+                }
             }
         }
 
