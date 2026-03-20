@@ -23,6 +23,30 @@
             <converters:ChangesCountConverter x:Key="ChangesCountConverter" />
 
             <Color x:Key="PrimaryColor">#2089da</Color>
+            <SolidColorBrush
+                x:Key="PrimaryBrush05"
+                Opacity=".05"
+                Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="PrimaryBrush10"
+                Opacity=".1"
+                Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="PrimaryBrush30"
+                Opacity=".3"
+                Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="PrimaryBrush50"
+                Opacity=".5"
+                Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="PrimaryBrush70"
+                Opacity=".7"
+                Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="PrimaryBrush90"
+                Opacity=".9"
+                Color="{DynamicResource PrimaryColor}" />
 
             <!--  自定义样式  -->
             <Style x:Key="ProjectItemStyle" TargetType="Border">

@@ -148,7 +148,7 @@
                     Grid.Row="1"
                     Padding="0,4"
                     AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
-                    AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource SelectedBackground}"
+                    AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush10}"
                     ItemsSource="{Binding Projects}"
                     SelectedItem="{Binding SelectedItem}">
                     <AduSkin:AduListBox.Resources>
