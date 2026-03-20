@@ -578,6 +578,10 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        /// <summary>
+        /// 生成选择(多选)
+        /// </summary>
+        /// <returns></returns>
         private async Task BuildSelectedAsync()
         {
             var selectedProjects = SelectedProjects.Where(p => p.IsDotNetProject).ToList();
@@ -633,7 +637,6 @@ namespace DotNetBuilder.ViewModels
 
                         if (result.Success)
                         {
-                            AppendLog($"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n");
                             await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
                         }
                         else
@@ -973,7 +976,6 @@ namespace DotNetBuilder.ViewModels
                 if (result.Success)
                 {
                     project.IsExpanded = false;
-                    AppendLog($"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n");
                     // 如果当前选中的是这个项目，刷新exe列表
                     if (SelectedProject == project)
                     {

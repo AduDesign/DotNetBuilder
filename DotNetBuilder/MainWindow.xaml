@@ -223,12 +223,14 @@
                                                 <TextBlock
                                                     x:Name="txtSyncingStatus"
                                                     HorizontalAlignment="Center"
+                                                    FontSize="12"
                                                     Foreground="{DynamicResource PrimaryBrush}"
                                                     Text="同步中..."
                                                     Visibility="Collapsed" />
                                                 <TextBlock
                                                     x:Name="txtBuildingStatus"
                                                     HorizontalAlignment="Center"
+                                                    FontSize="12"
                                                     Foreground="{DynamicResource PrimaryBrush}"
                                                     Text="构建中..."
                                                     Visibility="Collapsed" />
@@ -265,26 +267,49 @@
                                                     FontSize="12"
                                                     ToolTip="下移" />
                                                 <!--  单独同步按钮  -->
-                                                <AduSkin:AduPathIconButton
-                                                    Margin="0,0,5,0"
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
-                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
-                                                    AduAttach:PathDataAttach.Width="12"
-                                                    Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}"
-                                                    FontSize="10"
-                                                    ToolTip="单独同步此项目" />
+                                                <Grid>
+                                                    <AduSkin:AduPathIconButton
+                                                        AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
+                                                        AduAttach:PathDataAttach.Margin="0"
+                                                        AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
+                                                        AduAttach:PathDataAttach.Width="12"
+                                                        Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="单独同步此项目"
+                                                        Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToReVisibility}}" />
+                                                    <AduSkin:AduLoading
+                                                        Width="24"
+                                                        Height="24"
+                                                        MinWidth="24"
+                                                        MinHeight="24"
+                                                        Margin="0,0,5,0"
+                                                        HorizontalAlignment="Center"
+                                                        AduAttach:PathDataAttach.Width="10"
+                                                        IsActived="{Binding IsSyncing}"
+                                                        Type="Apple" />
+                                                </Grid>
                                                 <!--  单独构建按钮  -->
-                                                <AduSkin:AduPathIconButton
-                                                    Margin="0,0,5,0"
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="Green"
-                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
-                                                    AduAttach:PathDataAttach.Width="9"
-                                                    Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}"
-                                                    FontSize="10"
-                                                    ToolTip="单独构建此项目"
-                                                    Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                <Grid Margin="0,0,5,0" Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <AduSkin:AduPathIconButton
+                                                        Margin="0"
+                                                        AduAttach:PathBrushAttach.NormalPathBrush="Green"
+                                                        AduAttach:PathDataAttach.Margin="0"
+                                                        AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
+                                                        AduAttach:PathDataAttach.Width="9"
+                                                        Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip="单独构建此项目"
+                                                        Visibility="{Binding IsBuilding, Converter={StaticResource BooleanToReVisibility}}" />
+                                                    <AduSkin:AduLoading
+                                                        Width="24"
+                                                        Height="24"
+                                                        MinWidth="24"
+                                                        MinHeight="24"
+                                                        HorizontalAlignment="Center"
+                                                        AduAttach:PathDataAttach.Width="10"
+                                                        IsActived="{Binding IsBuilding}"
+                                                        Type="Apple" />
+                                                </Grid>
                                                 <!--  移除项目按钮  -->
                                                 <AduSkin:AduPathIconButton
                                                     AduAttach:PathBrushAttach.NormalPathBrush="#FF4444"
@@ -293,7 +318,7 @@
                                                     Command="{Binding DataContext.RemoveProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                                     CommandParameter="{Binding}"
                                                     FontSize="10"
-                                                    ToolTip="移除此项目（保存后将不再加载）" />
+                                                    ToolTip="移除此项目" />
                                             </StackPanel>
                                         </Grid>
                                     </AduSkin:AduExpander.Header>
@@ -307,7 +332,7 @@
                                                 Background="#FFF0F0"
                                                 BorderBrush="#50FF4444"
                                                 BorderThickness="1"
-                                                CornerRadius="4"
+                                                CornerRadius="6"
                                                 Visibility="Collapsed">
                                                 <StackPanel>
                                                     <TextBlock
@@ -386,12 +411,12 @@
                                 <DataTemplate.Triggers>
                                     <!--  有错误时红色边框并显示错误信息  -->
                                     <DataTrigger Binding="{Binding HasError}" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FF4444" />
+                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
                                         <Setter TargetName="ErrorPanel" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                     <!--  有更改时橙色边框  -->
                                     <DataTrigger Binding="{Binding HasChanges}" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#FFA500" />
+                                        <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource WarnBrush}" />
                                         <Setter TargetName="ChangePanel" Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding HasChanges}" Value="False">
