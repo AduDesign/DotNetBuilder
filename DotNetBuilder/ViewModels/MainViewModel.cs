@@ -67,6 +67,9 @@ namespace DotNetBuilder.ViewModels
             SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
             BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
             RemoveProjectCommand = new RelayCommand(RemoveProject);
+            OpenFolderCommand = new RelayCommand(OpenFolder);
+            OpenVSCommand = new RelayCommand(OpenVS);
+            OpenVSCodeCommand = new RelayCommand(OpenVSCode);
 
             // 加载MSBuild版本
             LoadMSBuildVersions();
@@ -222,6 +225,9 @@ namespace DotNetBuilder.ViewModels
         public ICommand BuildSingleCommand { get; }
         public ICommand SaveConfigCommand { get; }
         public ICommand RemoveProjectCommand { get; }
+        public ICommand OpenFolderCommand { get; }
+        public ICommand OpenVSCommand { get; }
+        public ICommand OpenVSCodeCommand { get; }
 
         #endregion
 
@@ -1008,6 +1014,93 @@ namespace DotNetBuilder.ViewModels
             finally
             {
                 project.IsBuilding = false;
+            }
+        }
+
+        /// <summary>
+        /// 打开文件夹
+        /// </summary>
+        private void OpenFolder(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            try
+            {
+                AppendLog($"打开文件夹: {project.Path}\n");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{project.Path}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"打开文件夹失败: {ex.Message}\n");
+                AduMessageBox.Show($"打开文件夹失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 用 VisualStudio 打开项目
+        /// </summary>
+        private void OpenVS(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            try
+            {
+                // 优先使用解决方案文件，如果没有则使用项目文件
+                var targetPath = !string.IsNullOrEmpty(project.SolutionPath)
+                    ? project.SolutionPath
+                    : project.ProjectFilePath;
+
+                if (string.IsNullOrEmpty(targetPath))
+                {
+                    AppendLog($"[{project.Name}] 未找到解决方案或项目文件\n");
+                    AduMessageBox.Show($"未找到解决方案或项目文件", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                AppendLog($"用 VisualStudio 打开: {targetPath}\n");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "devenv.exe",
+                    Arguments = $"\"{targetPath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"用 VisualStudio 打开失败: {ex.Message}\n");
+                AduMessageBox.Show($"用 VisualStudio 打开失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 用 VSCode 打开项目
+        /// </summary>
+        private void OpenVSCode(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            try
+            {
+                AppendLog($"用 VSCode 打开: {project.Path}\n");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "code",
+                    Arguments = $"\"{project.Path}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"用 VSCode 打开失败: {ex.Message}\n");
+                AduMessageBox.Show($"用 VSCode 打开失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

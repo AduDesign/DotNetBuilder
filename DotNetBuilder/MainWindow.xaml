@@ -173,9 +173,18 @@
                     </AduSkin:AduListBox.ItemContainerStyle>
                     <AduSkin:AduListBox.ContextMenu>
                         <AduSkin:AduContextMenu>
-                            <AduSkin:AduMenuItem Header="打开目录" />
-                            <AduSkin:AduMenuItem Header="VisualStudio 打开" />
-                            <AduSkin:AduMenuItem Header="VisualStudio Code 打开" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding OpenFolderCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="打开目录" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding OpenVSCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="VisualStudio 打开" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding OpenVSCodeCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="VisualStudio Code 打开" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding BuildSingleCommand}"
                                 CommandParameter="{Binding SelectedItem}"
