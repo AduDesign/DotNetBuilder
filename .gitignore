@@ -6,3 +6,4 @@
 /.vs
 /DotNetBuilder/bin/Debug/net10.0-windows
 /DotNetBuilder/obj
+/.idea/.idea.DotNetBuilder/.idea
