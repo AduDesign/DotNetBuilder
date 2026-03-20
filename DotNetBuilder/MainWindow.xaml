@@ -6,7 +6,7 @@
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:local="clr-namespace:DotNetBuilder"
-    Title=".NET Project Manager"
+    Title=".NET Project Builder"
     Width="600"
     Height="900"
     MinWidth="600"
@@ -20,15 +20,15 @@
             <RowDefinition
                 Height="200"
                 MinHeight="200"
-                MaxHeight="400" />
+                MaxHeight="600" />
         </Grid.RowDefinitions>
 
         <!--  工具栏  -->
         <Border
             Padding="10"
-            Background="White"
             BorderBrush="#E0E0E0"
-            BorderThickness="0,0,0,1">
+            BorderThickness="0,0,0,1"
+            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -53,7 +53,6 @@
                         MaxWidth="300"
                         VerticalAlignment="Center"
                         BorderThickness="0"
-                        Foreground="#333"
                         IsReadOnly="True"
                         Text="{Binding SelectedPath}" />
 
@@ -67,24 +66,18 @@
                 <!--  全选/取消全选  -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <AduSkin:AduButton
-                        Width="80"
                         Margin="0,0,8,0"
                         Command="{Binding SelectAllCommand}"
                         Content="全选" />
                     <AduSkin:AduButton
-                        Width="80"
                         Margin="0,0,8,0"
                         Command="{Binding SelectNoneCommand}"
                         Content="取消全选" />
                     <AduSkin:AduButton
-                        Width="80"
                         Margin="0,0,8,0"
                         Command="{Binding RefreshStatusCommand}"
                         Content="刷新状态" />
-                    <AduSkin:AduButton
-                        Width="80"
-                        Command="{Binding SaveConfigCommand}"
-                        Content="保存" />
+                    <AduSkin:AduButton Command="{Binding SaveConfigCommand}" Content="保存" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -94,10 +87,10 @@
             Grid.Row="1"
             Margin="10"
             Padding="6"
-            Background="White"
             BorderBrush="{DynamicResource NormalBorderBrush}"
             BorderThickness="1"
-            CornerRadius="8">
+            CornerRadius="8"
+            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -128,28 +121,24 @@
                             Grid.Column="1"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
-                            Foreground="#333"
                             Text="项目名称" />
                         <TextBlock
                             Grid.Column="2"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
-                            Foreground="#333"
                             Text="类型" />
                         <TextBlock
                             Grid.Column="3"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
-                            Foreground="#333"
                             Text="状态" />
                         <TextBlock
                             Grid.Column="4"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             FontWeight="SemiBold"
-                            Foreground="#333"
                             Text="操作" />
                     </Grid>
                 </Border>
@@ -202,7 +191,6 @@
                                                 <TextBlock
                                                     FontSize="14"
                                                     FontWeight="Medium"
-                                                    Foreground="#333"
                                                     Text="{Binding Name}" />
                                                 <TextBlock
                                                     FontSize="11"
@@ -235,15 +223,13 @@
                                                 <TextBlock
                                                     x:Name="txtSyncingStatus"
                                                     HorizontalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#0078D4"
+                                                    Foreground="{DynamicResource PrimaryBrush}"
                                                     Text="同步中..."
                                                     Visibility="Collapsed" />
                                                 <TextBlock
                                                     x:Name="txtBuildingStatus"
                                                     HorizontalAlignment="Center"
-                                                    FontSize="10"
-                                                    Foreground="#0078D4"
+                                                    Foreground="{DynamicResource PrimaryBrush}"
                                                     Text="构建中..."
                                                     Visibility="Collapsed" />
                                                 <!--  正常状态显示更改数  -->
@@ -319,7 +305,7 @@
                                                 Margin="0,0,0,10"
                                                 Padding="10"
                                                 Background="#FFF0F0"
-                                                BorderBrush="#FF4444"
+                                                BorderBrush="#50FF4444"
                                                 BorderThickness="1"
                                                 CornerRadius="4"
                                                 Visibility="Collapsed">
@@ -328,19 +314,26 @@
                                                         FontWeight="Bold"
                                                         Foreground="#CC0000"
                                                         Text="错误信息:" />
-                                                    <TextBlock
+                                                    <AduSkin:AduTextBox
+                                                        Height="Auto"
+                                                        MaxHeight="200"
                                                         Margin="0,5,0,0"
-                                                        FontFamily="Consolas"
-                                                        FontSize="11"
-                                                        Foreground="#CC0000"
+                                                        BorderBrush="{DynamicResource ErrorBrush}"
+                                                        FontSize="10"
+                                                        Foreground="{DynamicResource ErrorBrush}"
+                                                        IsReadOnly="True"
                                                         Text="{Binding ErrorMessage}"
-                                                        TextWrapping="Wrap" />
+                                                        TextWrapping="Wrap"
+                                                        VerticalScrollBarVisibility="Auto" />
                                                 </StackPanel>
                                             </Border>
 
                                             <UniformGrid Columns="3">
                                                 <!--  MSBuild版本选择  -->
-                                                <AduSkin:AduFormBox Margin="0,0,10,0" Header="MSBuild:">
+                                                <AduSkin:AduFormBox
+                                                    Margin="0,0,10,0"
+                                                    Header="MSBuild:"
+                                                    Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
                                                     <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
                                                         <AduSkin:AduComboBox.ItemTemplate>
                                                             <DataTemplate>
@@ -446,18 +439,28 @@
         <Grid Grid.Row="3" Margin="20,10,20,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
             <!--  右侧操作按钮  -->
-            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+            <StackPanel
+                Margin="0,0,0,10"
+                IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+                Orientation="Horizontal">
                 <AduSkin:AduFormBox Header="运行项目">
                     <AduSkin:AduComboBox
-                        Width="250"
+                        Width="120"
                         DisplayMemberPath="Path"
                         ItemsSource="{Binding Projects}"
                         SelectedItem="{Binding SelectedProject}" />
                 </AduSkin:AduFormBox>
+                <AduSkin:AduButton
+                    Width="Auto"
+                    Margin="10,0,0,0"
+                    Padding="10,0"
+                    Command="{Binding RunSelectedCommand}"
+                    Content="运行程序" />
                 <!--  主操作按钮  -->
                 <AduSkin:AduButton
                     Width="Auto"
@@ -477,19 +480,60 @@
                     Width="Auto"
                     Margin="10,0,0,0"
                     Padding="10,0"
-                    Command="{Binding RunSelectedCommand}"
-                    Content="运行程序" />
-
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="10,0,0,0"
-                    Padding="10,0"
                     Command="{Binding SaveConfigCommand}"
                     Content="保存配置" />
             </StackPanel>
 
+            <!--  日志过滤选项  -->
+            <StackPanel
+                Grid.Row="1"
+                Margin="0,0,0,10"
+                IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+                Orientation="Horizontal">
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="#666"
+                    Text="日志过滤:" />
+                <AduSkin:AduCheckBox
+                    Margin="10,0,0,0"
+                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
+                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource ErrorBrush}"
+                    Content="错误"
+                    Foreground="{DynamicResource ErrorBrush}"
+                    IsChecked="{Binding ShowErrorLog}" />
+                <AduSkin:AduCheckBox
+                    Margin="10,0,0,0"
+                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
+                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource WarnBrush}"
+                    Content="警告"
+                    Foreground="{DynamicResource WarnBrush}"
+                    IsChecked="{Binding ShowWarningLog}" />
+                <AduSkin:AduCheckBox
+                    Margin="10,0,0,0"
+                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource InfoBrush}"
+                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource InfoBrush}"
+                    Content="消息"
+                    Foreground="{DynamicResource InfoBrush}"
+                    IsChecked="{Binding ShowMessageLog}" />
+                <AduSkin:AduCheckBox
+                    Margin="10,0,0,0"
+                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource SuccessBrush}"
+                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource SuccessBrush}"
+                    Content="Git"
+                    Foreground="{DynamicResource SuccessBrush}"
+                    IsChecked="{Binding ShowGitLog}" />
+                <AduSkin:AduCheckBox
+                    Margin="10,0,0,0"
+                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource StringPinBrush}"
+                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource StringPinBrush}"
+                    Content="Build"
+                    Foreground="{DynamicResource StringPinBrush}"
+                    IsChecked="{Binding ShowBuildLog}"
+                    ToolTip="MSBuild编译详细输出（文件路径等），默认不显示" />
+            </StackPanel>
+
             <!--  日志输出  -->
-            <AduSkin:AduGroupBox Grid.Row="1" VerticalContentAlignment="Stretch">
+            <AduSkin:AduGroupBox Grid.Row="2" VerticalContentAlignment="Stretch">
                 <AduSkin:AduGroupBox.Header>
                     <Grid>
                         <TextBlock VerticalAlignment="Center" Text="输出日志" />
@@ -502,16 +546,19 @@
                             Command="{Binding ClearLogCommand}"
                             Content="清空"
                             FontSize="11"
-                            Foreground="{DynamicResource PrimaryBrush}" />
+                            Foreground="{DynamicResource PrimaryBrush}"
+                            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}" />
                     </Grid>
                 </AduSkin:AduGroupBox.Header>
 
                 <AduSkin:AduTextBox
                     Height="Auto"
                     VerticalAlignment="Stretch"
+                    VerticalContentAlignment="Top"
                     AduAttach:BorderAttach.CornerRadius="0,0,6,6"
                     BorderThickness="0"
                     FontSize="10"
+                    IsAutoScrollToBottom="True"
                     IsReadOnly="True"
                     Text="{Binding LogOutput}"
                     TextWrapping="Wrap"
@@ -521,10 +568,7 @@
         </Grid>
 
         <!--  加载中遮罩  -->
-        <Border
-            Grid.RowSpan="4"
-            Background="#80000000"
-            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+        <Border Grid.RowSpan="2" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <AduSkin:AduLoading
                     Width="100"

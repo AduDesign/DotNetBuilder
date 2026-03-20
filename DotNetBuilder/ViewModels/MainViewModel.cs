@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using AduSkin.Controls;
@@ -10,6 +9,18 @@ using DotNetBuilder.Services;
 
 namespace DotNetBuilder.ViewModels
 {
+    /// <summary>
+    /// 日志类型枚举
+    /// </summary>
+    public enum LogType
+    {
+        Message,  // 普通消息
+        Error,    // 错误
+        Warning,  // 警告
+        Git,      // Git操作
+        Build     // Build编译日志（MSBuild详细输出）
+    }
+
     /// <summary>
     /// 主窗口ViewModel
     /// </summary>
@@ -24,6 +35,13 @@ namespace DotNetBuilder.ViewModels
         private MSBuildVersion? _selectedMSBuildVersion;
         private GitProject? _selectedProject;
         private string _selectedExecutable = string.Empty;
+
+        // 日志过滤选项
+        private bool _showErrorLog = true;
+        private bool _showWarningLog = true;
+        private bool _showMessageLog = true;
+        private bool _showGitLog = true;
+        private bool _showBuildLog = false; // Build编译日志，默认不显示
 
         public MainViewModel()
         {
@@ -128,6 +146,51 @@ namespace DotNetBuilder.ViewModels
         /// </summary>
         public IEnumerable<GitProject> SelectedProjects => Projects.Where(p => p.IsSelected);
 
+        /// <summary>
+        /// 是否显示错误日志
+        /// </summary>
+        public bool ShowErrorLog
+        {
+            get => _showErrorLog;
+            set => SetProperty(ref _showErrorLog, value);
+        }
+
+        /// <summary>
+        /// 是否显示警告日志
+        /// </summary>
+        public bool ShowWarningLog
+        {
+            get => _showWarningLog;
+            set => SetProperty(ref _showWarningLog, value);
+        }
+
+        /// <summary>
+        /// 是否显示消息日志
+        /// </summary>
+        public bool ShowMessageLog
+        {
+            get => _showMessageLog;
+            set => SetProperty(ref _showMessageLog, value);
+        }
+
+        /// <summary>
+        /// 是否显示Git日志
+        /// </summary>
+        public bool ShowGitLog
+        {
+            get => _showGitLog;
+            set => SetProperty(ref _showGitLog, value);
+        }
+
+        /// <summary>
+        /// 是否显示Build编译日志（MSBuild详细输出）
+        /// </summary>
+        public bool ShowBuildLog
+        {
+            get => _showBuildLog;
+            set => SetProperty(ref _showBuildLog, value);
+        }
+
         #endregion
 
         #region 命令
@@ -151,6 +214,169 @@ namespace DotNetBuilder.ViewModels
         #endregion
 
         #region 方法
+
+        /// <summary>
+        /// 根据日志内容自动分类并输出日志
+        /// </summary>
+        /// <param name="message">日志消息</param>
+        private void AppendLog(string message)
+        {
+            // 自动根据内容分类日志类型
+            var logType = ClassifyLogType(message);
+
+            // 检查是否应该显示该类型的日志
+            bool shouldShow = logType switch
+            {
+                LogType.Error => ShowErrorLog,
+                LogType.Warning => ShowWarningLog,
+                LogType.Message => ShowMessageLog,
+                LogType.Git => ShowGitLog,
+                LogType.Build => ShowBuildLog,
+                _ => true
+            };
+
+            if (shouldShow)
+            {
+                LogOutput += message;
+            }
+        }
+
+        /// <summary>
+        /// 根据日志内容自动分类日志类型
+        /// </summary>
+        private LogType ClassifyLogType(string message)
+        {
+            // 错误日志
+            if (message.Contains("error", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Error", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("错误") ||
+                message.Contains("异常") ||
+                message.Contains("失败") ||
+                message.Contains("FAILED") ||
+                message.Contains("FAIL:"))
+            {
+                return LogType.Error;
+            }
+
+            // 警告日志
+            if (message.Contains("warning", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Warning", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("警告") ||
+                message.Contains("WARN:"))
+            {
+                return LogType.Warning;
+            }
+
+            // Build编译日志（MSBuild详细输出）
+            // 包含文件路径、编译过程、目录信息等
+            if (IsBuildDetailedLog(message))
+            {
+                return LogType.Build;
+            }
+
+            // Git相关日志
+            if (message.Contains("[NuGet]", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("NuGet") ||
+                message.Contains("git", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("Git") ||
+                message.Contains("commit", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("push", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("pull", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("暂存", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("提交", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("拉取", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("同步", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在扫描", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("扫描完成", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在检测", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在检查", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("发现", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("更新成功", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("还原成功", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("无需还原", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("还原完成", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在还原", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在编译", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("开始构建", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("构建成功", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("构建目标", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("使用 MSBuild", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("输出目录", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("可执行文件", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在拉取更新", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("有未提交的更改", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在扫描", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("正在加载", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("配置加载", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("配置已保存", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("已跳过", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("跳过多项目", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("==========", StringComparison.OrdinalIgnoreCase))
+            {
+                return LogType.Git;
+            }
+
+            return LogType.Message;
+        }
+
+        /// <summary>
+        /// 判断是否为Build编译详细日志（MSBuild的详细输出）
+        /// </summary>
+        private bool IsBuildDetailedLog(string message)
+        {
+            // 去掉开头和结尾的空白
+            message = message.Trim();
+
+            // 如果消息太短或太长，不太可能是详细编译日志
+            if (message.Length < 10 || message.Length > 500)
+                return false;
+
+            // Build详细日志的特征：
+            // 1. 包含反斜杠的文件路径 (如 C:\, D:\)
+            // 2. 包含编译文件列表 (如 .cs, .xaml, .resx 等)
+            // 3. 包含 "->" 箭头（表示输出）
+            // 4. 包含 "Copy" 复制操作
+            // 5. 包含 "Generate" 生成操作
+            // 6. 包含目录路径模式
+
+            // 检查是否包含典型的文件扩展名
+            var fileExtensions = new[] { ".cs", ".xaml", ".resx", ".csproj", ".sln", ".json", ".xml", ".config" };
+            bool hasFileExtension = fileExtensions.Any(ext =>
+                message.Contains(ext, StringComparison.OrdinalIgnoreCase));
+
+            // 检查是否包含文件路径模式 (如 C:\ 或 \bin\)
+            bool hasFilePath = (message.Contains(":\\") || message.Contains("\\bin\\") ||
+                                message.Contains("\\obj\\") || message.Contains("\\Properties\\"));
+
+            // 检查是否包含 Build 详细日志的关键词
+            bool hasBuildKeyword = message.Contains("->") || message.Contains("Copy ") ||
+                                   message.Contains("Generate") || message.Contains("Task ") ||
+                                   message.Contains("Target ") || message.Contains("CoreCompile") ||
+                                   message.Contains("ResolveAssemblyReferences") ||
+                                   message.Contains(".dll") || message.Contains(".exe");
+
+            // 如果同时有文件扩展名和文件路径，很可能是详细编译日志
+            if (hasFileExtension && hasFilePath)
+                return true;
+
+            // 如果有 Build 关键词和文件路径
+            if (hasBuildKeyword && hasFilePath)
+                return true;
+
+            // 检查是否是多行的详细输出（包含多个路径）
+            if (hasFilePath && message.Contains("\n"))
+                return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// 输出日志（带换行，自动分类）
+        /// </summary>
+        private void AppendLogLine(string message)
+        {
+            AppendLog(message + "\n");
+        }
 
         private void LoadMSBuildVersions()
         {
@@ -192,7 +418,7 @@ namespace DotNetBuilder.ViewModels
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 Projects.Clear();
-                LogOutput = $"正在扫描: {SelectedPath}\n";
+                AppendLog($"正在扫描: {SelectedPath}\n");
             });
 
             try
@@ -202,7 +428,7 @@ namespace DotNetBuilder.ViewModels
                     // 进度更新在UI线程上执行
                     Application.Current.Dispatcher.Invoke(() =>
                     {
-                        LogOutput += msg + "\n";
+                        AppendLog(msg + "\n");
                     });
                 });
 
@@ -224,15 +450,17 @@ namespace DotNetBuilder.ViewModels
                     }
                     Projects.Add(project);
                 }
+                //选中项
+                SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
 
                 // 在UI线程上更新日志
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    LogOutput += $"\n扫描完成，发现 {projects.Count} 个Git项目\n";
+                    AppendLog($"\n扫描完成，发现 {projects.Count} 个Git项目\n");
                     if (projects.Count > 0)
                     {
                         var dotnetCount = projects.Count(p => p.IsDotNetProject);
-                        LogOutput += $"其中 {dotnetCount} 个是.NET项目\n";
+                        AppendLog($"其中 {dotnetCount} 个是.NET项目\n");
                     }
                 });
             }
@@ -240,7 +468,7 @@ namespace DotNetBuilder.ViewModels
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    LogOutput += $"\n扫描失败: {ex.Message}\n";
+                    AppendLog($"\n扫描失败: {ex.Message}\n");
                 });
             }
             finally
@@ -252,7 +480,7 @@ namespace DotNetBuilder.ViewModels
         private async Task RefreshStatusAsync()
         {
             IsBusy = true;
-            LogOutput += "\n正在刷新项目状态...\n";
+            AppendLog("\n正在刷新项目状态...\n");
 
             try
             {
@@ -260,7 +488,7 @@ namespace DotNetBuilder.ViewModels
                 {
                     await _gitService.UpdateProjectStatusAsync(project);
                 }
-                LogOutput += "状态刷新完成\n";
+                AppendLog("状态刷新完成\n");
             }
             finally
             {
@@ -278,7 +506,7 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            LogOutput += $"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n";
+            AppendLog($"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
@@ -297,7 +525,7 @@ namespace DotNetBuilder.ViewModels
                     {
                         var progress = new Progress<string>(msg =>
                         {
-                            LogOutput += $"[{project.Name}] {msg}\n";
+                            AppendLog($"[{project.Name}] {msg}\n");
                         });
 
                         await _gitService.UpdateProjectStatusAsync(project);
@@ -323,7 +551,7 @@ namespace DotNetBuilder.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        LogOutput += $"[{project.Name}] 同步异常: {ex.Message}\n";
+                        AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             project.ErrorMessage = ex.Message;
@@ -338,11 +566,11 @@ namespace DotNetBuilder.ViewModels
 
                 await Task.WhenAll(tasks);
 
-                LogOutput += $"\n========== 同步完成 ==========\n";
+                AppendLog($"\n========== 同步完成 ==========\n");
             }
             catch (Exception ex)
             {
-                LogOutput += $"\n同步出错: {ex.Message}\n";
+                AppendLog($"\n同步出错: {ex.Message}\n");
             }
             finally
             {
@@ -369,13 +597,13 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            LogOutput += $"\n========== 开始构建 {selectedProjects.Count} 个项目 ==========\n";
+            AppendLog($"\n========== 开始构建 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
                 var progress = new Progress<string>(msg =>
                 {
-                    LogOutput += msg + "\n";
+                    AppendLog(msg + "\n");
                 });
 
                 bool buildFailed = false;
@@ -384,7 +612,7 @@ namespace DotNetBuilder.ViewModels
                     // 如果之前有项目构建失败，跳过后续项目
                     if (buildFailed)
                     {
-                        LogOutput += $"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n";
+                        AppendLog($"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n");
                         continue;
                     }
 
@@ -400,17 +628,17 @@ namespace DotNetBuilder.ViewModels
 
                     try
                     {
-                        LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}, 配置: {project.Configuration}\n";
+                        AppendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}, 配置: {project.Configuration}\n");
                         var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
                         if (result.Success)
                         {
-                            LogOutput += $"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n";
+                            AppendLog($"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n");
                             await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
                         }
                         else
                         {
-                            LogOutput += $"[{project.Name}] 构建失败: {result.ErrorMessage}\n";
+                            AppendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
                             buildFailed = true;
                             await Application.Current.Dispatcher.InvokeAsync(() =>
                             {
@@ -421,7 +649,7 @@ namespace DotNetBuilder.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        LogOutput += $"[{project.Name}] 构建异常: {ex.Message}\n";
+                        AppendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
                         buildFailed = true;
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
@@ -435,14 +663,14 @@ namespace DotNetBuilder.ViewModels
                     }
                 }
 
-                LogOutput += $"\n========== 构建完成 ==========\n";
+                AppendLog($"\n========== 构建完成 ==========\n");
 
                 // 刷新选中项目的exe列表
                 LoadProjectExecutables();
             }
             catch (Exception ex)
             {
-                LogOutput += $"\n构建出错: {ex.Message}\n";
+                AppendLog($"\n构建出错: {ex.Message}\n");
             }
             finally
             {
@@ -474,12 +702,12 @@ namespace DotNetBuilder.ViewModels
             try
             {
                 await _configService.SaveConfigAsync(Projects, SelectedPath);
-                LogOutput += $"\n配置已保存\n";
+                AppendLog("\n配置已保存\n");
                 AduMessageBox.Show("配置保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                LogOutput += $"\n保存配置失败: {ex.Message}\n";
+                AppendLog($"\n保存配置失败: {ex.Message}\n");
                 AduMessageBox.Show($"保存配置失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -494,7 +722,7 @@ namespace DotNetBuilder.ViewModels
 
                 // 设置路径并扫描
                 SelectedPath = config.SelectedPath;
-                LogOutput += $"正在加载上次配置...\n";
+                AppendLog("正在加载上次配置...\n");
                 await ScanProjectsAsync();
 
                 // 收集已移除的项目路径
@@ -539,16 +767,15 @@ namespace DotNetBuilder.ViewModels
                 var sorted = Projects.OrderBy(p => p.SortOrder).ToList();
                 Projects.Clear();
                 foreach (var project in sorted)
-                {
                     Projects.Add(project);
-                }
+                SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
 
                 if (removedPaths.Count > 0)
                 {
-                    LogOutput += $"已跳过 {removedPaths.Count} 个已移除的项目\n";
+                    AppendLog($"已跳过 {removedPaths.Count} 个已移除的项目\n");
                 }
 
-                LogOutput += $"配置加载完成\n";
+                AppendLog("配置加载完成\n");
             }
             catch
             {
@@ -565,7 +792,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                LogOutput += $"\n启动程序 [{SelectedProject.Name}]: {exePath}\n";
+                AppendLog($"\n启动程序 [{SelectedProject.Name}]: {exePath}\n");
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = exePath,
@@ -575,7 +802,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                LogOutput += $"启动失败: {ex.Message}\n";
+                AppendLog($"启动失败: {ex.Message}\n");
                 AduMessageBox.Show($"启动程序失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -658,13 +885,11 @@ namespace DotNetBuilder.ViewModels
                 project.IsSelected = false; // 取消选中
                 project.IsRemoved = true;   // 标记为已移除
                 Projects.Remove(project);    // 从列表移除
-                LogOutput += $"已移除项目: {project.Name}\n";
+                AppendLog($"已移除项目: {project.Name}\n");
 
                 // 如果移除的是当前选中的项目，清空选择
                 if (SelectedProject == project)
-                {
-                    SelectedProject = null;
-                }
+                    SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
             }
         }
 
@@ -676,7 +901,7 @@ namespace DotNetBuilder.ViewModels
             if (parameter is not GitProject project)
                 return;
 
-            LogOutput += $"\n========== 同步项目: {project.Name} ==========\n";
+            AppendLog($"\n========== 同步项目: {project.Name} ==========\n");
 
             try
             {
@@ -686,7 +911,7 @@ namespace DotNetBuilder.ViewModels
 
                 var progress = new Progress<string>(msg =>
                 {
-                    LogOutput += $"[{project.Name}] {msg}\n";
+                    AppendLog($"[{project.Name}] {msg}\n");
                 });
 
                 await _gitService.UpdateProjectStatusAsync(project);
@@ -696,17 +921,17 @@ namespace DotNetBuilder.ViewModels
                 {
                     await _gitService.UpdateProjectStatusAsync(project);
                     project.IsExpanded = false;
-                    LogOutput += $"[{project.Name}] 同步成功\n";
+                    AppendLog($"[{project.Name}] 同步成功\n");
                 }
                 else
                 {
                     project.ErrorMessage = result.Message;
-                    LogOutput += $"[{project.Name}] 同步失败: {result.Message}\n";
+                    AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
                 }
             }
             catch (Exception ex)
             {
-                LogOutput += $"[{project.Name}] 同步异常: {ex.Message}\n";
+                AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally
@@ -729,7 +954,7 @@ namespace DotNetBuilder.ViewModels
                 return;
             }
 
-            LogOutput += $"\n========== 构建项目: {project.Name} ==========\n";
+            AppendLog($"\n========== 构建项目: {project.Name} ==========\n");
 
             try
             {
@@ -739,16 +964,16 @@ namespace DotNetBuilder.ViewModels
 
                 var progress = new Progress<string>(msg =>
                 {
-                    LogOutput += $"[{project.Name}] {msg}\n";
+                    AppendLog($"[{project.Name}] {msg}\n");
                 });
 
-                LogOutput += $"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n";
+                AppendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
                 var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
                 if (result.Success)
                 {
                     project.IsExpanded = false;
-                    LogOutput += $"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n";
+                    AppendLog($"[{project.Name}] 构建成功，耗时: {result.Duration.TotalSeconds:F1}s\n");
                     // 如果当前选中的是这个项目，刷新exe列表
                     if (SelectedProject == project)
                     {
@@ -758,12 +983,12 @@ namespace DotNetBuilder.ViewModels
                 else
                 {
                     project.ErrorMessage = result.ErrorMessage ?? "构建失败";
-                    LogOutput += $"[{project.Name}] 构建失败: {result.ErrorMessage}\n";
+                    AppendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
                 }
             }
             catch (Exception ex)
             {
-                LogOutput += $"[{project.Name}] 构建异常: {ex.Message}\n";
+                AppendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally

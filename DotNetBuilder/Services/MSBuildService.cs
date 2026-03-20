@@ -482,8 +482,7 @@ namespace DotNetBuilder.Services
                 }
 
                 progress?.Report($"[Build] 正在编译...");
-                var output = await RunMSBuildAsync(msbuildPath, arguments, project.Path, progress);
-
+                var output = await RunMSBuildAsync(msbuildPath, arguments, project.Path, progress); 
                 result.Output = output;
 
                 // 解析输出获取错误和警告
