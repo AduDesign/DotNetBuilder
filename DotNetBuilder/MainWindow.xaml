@@ -5,12 +5,12 @@
     xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
-    xmlns:local="clr-namespace:DotNetBuilder"
     Title=".NET Project Builder"
     Width="600"
     Height="900"
     MinWidth="600"
     MinHeight="600"
+    Icon="builder.ico"
     WindowStartupLocation="CenterScreen">
     <Grid Background="{DynamicResource PanelBackground}">
         <Grid.RowDefinitions>

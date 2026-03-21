@@ -5,8 +5,13 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+	  <ApplicationIcon>builder.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="builder.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Include="Configs\Config.cs" />
@@ -16,6 +21,10 @@
     <Reference Include="AduSkin">
       <HintPath>..\ThirdParty\AduSkin.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="builder.ico" />
   </ItemGroup>
 
 </Project>
