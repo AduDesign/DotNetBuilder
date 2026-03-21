@@ -46,12 +46,13 @@ namespace DotNetBuilder.Models
             get => _isSelected;
             set
             {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged();
-                }
+                SetIsSelected(value);
             }
+        }
+        public void SetIsSelected(bool value)
+        {
+            _isSelected = value;
+            OnPropertyChanged(nameof(IsSelected));
         }
 
         private bool _isExpanded;

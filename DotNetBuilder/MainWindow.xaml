@@ -72,14 +72,6 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <AduSkin:AduButton
                         Margin="0,0,8,0"
-                        Command="{Binding SelectAllCommand}"
-                        Content="全选" />
-                    <AduSkin:AduButton
-                        Margin="0,0,8,0"
-                        Command="{Binding SelectNoneCommand}"
-                        Content="取消全选" />
-                    <AduSkin:AduButton
-                        Margin="0,0,8,0"
                         Command="{Binding RefreshStatusCommand}"
                         Content="刷新状态" />
                     <AduSkin:AduButton Command="{Binding SaveConfigCommand}" Content="保存" />
@@ -109,19 +101,16 @@
                     Padding="5,0,5,10"
                     BorderBrush="#E0E0E0"
                     BorderThickness="0,0,0,1">
-                    <Grid Margin="20,0,30,0">
+                    <Grid Margin="10,6,30,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="30" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="144" />
+                            <ColumnDefinition Width="110" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock
-                            Grid.Column="0"
-                            VerticalAlignment="Center"
-                            Text="" />
+                        <AduSkin:AduCheckBox IsChecked="{Binding IsSelectedAll}" IsThreeState="True" />
                         <TextBlock
                             Grid.Column="1"
                             VerticalAlignment="Center"
@@ -208,14 +197,14 @@
                         <DataTemplate>
                             <AduSkin:AduExpander
                                 x:Name="ItemBorder"
-                                Padding="12,4"
+                                Padding="8,4"
                                 Background="Transparent"
                                 BorderThickness="2"
                                 IsExpanded="{Binding IsExpanded}">
                                 <AduSkin:AduExpander.Header>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="30" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="80" />
                                             <ColumnDefinition Width="80" />
@@ -227,7 +216,7 @@
                                             Grid.Column="0"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
-                                            IsChecked="{Binding IsSelected}" />
+                                            IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                         <!--  项目信息  -->
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
@@ -246,13 +235,13 @@
                                         <!--  类型标签  -->
                                         <Border
                                             Grid.Column="2"
-                                            Padding="10,2"
+                                            Padding="4,1"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Background="{Binding IsDotNetProject, Converter={StaticResource HasChangesToBrushConverter}}"
-                                            CornerRadius="10">
+                                            CornerRadius="4">
                                             <TextBlock
-                                                FontSize="11"
+                                                FontSize="10"
                                                 Foreground="White"
                                                 Text="{Binding IsDotNetProject, Converter={StaticResource ProjectTypeConverter}}" />
                                         </Border>

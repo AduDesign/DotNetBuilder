@@ -57,8 +57,6 @@ namespace DotNetBuilder.ViewModels
             RunSelectedCommand = new RelayCommand(RunSelectedAsync, _ => SelectedProject != null && !string.IsNullOrEmpty(SelectedProject.ExecuteFile));
             MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
             MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
-            SelectAllCommand = new RelayCommand(SelectAll);
-            SelectNoneCommand = new RelayCommand(SelectNone);
             ClearLogCommand = new RelayCommand(_ => LogOutput = string.Empty);
             RefreshStatusCommand = new AsyncRelayCommand(RefreshStatusAsync);
             SaveConfigCommand = new AsyncRelayCommand(SaveConfigAsync, () => Projects.Any());
@@ -93,7 +91,7 @@ namespace DotNetBuilder.ViewModels
                 _selectedItem = value;
                 OnPropertyChanged();
             }
-        } 
+        }
 
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
 
@@ -218,8 +216,6 @@ namespace DotNetBuilder.ViewModels
         public ICommand RunSelectedCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
-        public ICommand SelectAllCommand { get; }
-        public ICommand SelectNoneCommand { get; }
         public ICommand ClearLogCommand { get; }
         public ICommand RefreshStatusCommand { get; }
         public ICommand SyncSingleCommand { get; }
@@ -465,9 +461,8 @@ namespace DotNetBuilder.ViewModels
                     project.SortOrder = sortOrder++;
                     // 设置默认MSBuild版本（如果有可用版本）
                     if (MSBuildVersions.Count > 0)
-                    {
                         project.SelectedMSBuildVersion = MSBuildVersions[0];
-                    }
+                    project.PropertyChanged += Project_PropertyChanged;
                     Projects.Add(project);
                 }
                 //选中项
@@ -758,6 +753,7 @@ namespace DotNetBuilder.ViewModels
                 var toRemove = Projects.Where(p => removedPaths.Contains(p.Path)).ToList();
                 foreach (var project in toRemove)
                 {
+                    project.PropertyChanged -= Project_PropertyChanged;
                     Projects.Remove(project);
                 }
 
@@ -790,7 +786,10 @@ namespace DotNetBuilder.ViewModels
                 var sorted = Projects.OrderBy(p => p.SortOrder).ToList();
                 Projects.Clear();
                 foreach (var project in sorted)
+                {
+                    project.PropertyChanged += Project_PropertyChanged;
                     Projects.Add(project);
+                }
                 SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
 
                 if (removedPaths.Count > 0)
@@ -882,19 +881,32 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        private void SelectAll(object? parameter)
-        {
-            foreach (var project in Projects)
-            {
-                project.IsSelected = true;
-            }
-        }
 
-        private void SelectNone(object? parameter)
+        public bool? IsSelectedAll
         {
-            foreach (var project in Projects)
+            get
             {
-                project.IsSelected = false;
+
+                if (Projects.Count(s => s.IsSelected) == Projects.Count)
+                    return true;
+                else if (Projects.Any(s => s.IsSelected))
+                    return null;
+                else
+                    return false;
+            }
+            set
+            {
+                bool? oldValue = IsSelectedAll;
+                foreach (var item in Projects)
+                {
+                    if (oldValue == true)
+                        item.SetIsSelected(false);
+                    else if (oldValue == false)
+                        item.SetIsSelected(true);
+                    else if (oldValue == null)
+                        item.SetIsSelected(true);
+                }
+                OnPropertyChanged();
             }
         }
 
@@ -907,6 +919,7 @@ namespace DotNetBuilder.ViewModels
             {
                 project.IsSelected = false; // 取消选中
                 project.IsRemoved = true;   // 标记为已移除
+                project.PropertyChanged -= Project_PropertyChanged;
                 Projects.Remove(project);    // 从列表移除
                 AppendLog($"已移除项目: {project.Name}\n");
 
@@ -1147,10 +1160,8 @@ namespace DotNetBuilder.ViewModels
                 project.ProjectFilePath = _gitService.GetProjectFilePath(project.Path);
                 project.SortOrder = Projects.Count;
                 if (MSBuildVersions.Count > 0)
-                {
                     project.SelectedMSBuildVersion = MSBuildVersions[0];
-                }
-
+                project.PropertyChanged += Project_PropertyChanged;
                 Projects.Add(project);
                 AppendLog($"已添加项目: {project.Name}\n");
             }
@@ -1160,6 +1171,11 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        private void Project_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(GitProject.IsSelected))
+                OnPropertyChanged(nameof(IsSelectedAll));
+        }
         #endregion
     }
 }
