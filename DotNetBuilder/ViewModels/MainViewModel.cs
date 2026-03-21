@@ -237,6 +237,13 @@ namespace DotNetBuilder.ViewModels
         /// <param name="message">日志消息</param>
         private void AppendLog(string message)
         {
+            // 分隔符标题（如 "========== 同步完成 =========="）始终显示，不受过滤影响
+            if (message.Contains("=========="))
+            {
+                LogOutput += message;
+                return;
+            }
+
             // 自动根据内容分类日志类型
             var logType = ClassifyLogType(message);
 
@@ -554,6 +561,7 @@ namespace DotNetBuilder.ViewModels
                             {
                                 project.IsExpanded = false; // 成功则收起
                             });
+                            AppendLog($"[{project.Name}] 同步成功\n");
                         }
                         else
                         {
@@ -562,6 +570,7 @@ namespace DotNetBuilder.ViewModels
                                 project.ErrorMessage = result.Message;
                                 project.IsExpanded = true; // 失败则保持展开
                             });
+                            AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
                         }
                     }
                     catch (Exception ex)

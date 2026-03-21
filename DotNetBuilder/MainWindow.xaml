@@ -528,13 +528,6 @@
                     Padding="10,0"
                     Command="{Binding BuildSelectedCommand}"
                     Content="一键构建" />
-
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="10,0,0,0"
-                    Padding="10,0"
-                    Command="{Binding SaveConfigCommand}"
-                    Content="保存配置" />
             </StackPanel>
 
             <!--  日志过滤选项  -->

@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Configs\Config.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="AduSkin">
       <HintPath>..\ThirdParty\AduSkin.dll</HintPath>
     </Reference>
