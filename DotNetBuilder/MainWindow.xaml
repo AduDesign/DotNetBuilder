@@ -40,9 +40,14 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <AduSkin:AduButton
                         Width="80"
-                        Margin="0,0,15,0"
+                        Margin="0,0,8,0"
                         Command="{Binding SelectDirectoryCommand}"
                         Content="选择目录" />
+                    <AduSkin:AduButton
+                        Width="80"
+                        Margin="0,0,15,0"
+                        Command="{Binding AddProjectCommand}"
+                        Content="添加项目" />
 
                     <TextBlock
                         Margin="0,0,10,0"

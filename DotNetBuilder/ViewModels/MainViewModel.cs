@@ -70,6 +70,7 @@ namespace DotNetBuilder.ViewModels
             OpenFolderCommand = new RelayCommand(OpenFolder);
             OpenVSCommand = new RelayCommand(OpenVS);
             OpenVSCodeCommand = new RelayCommand(OpenVSCode);
+            AddProjectCommand = new AsyncRelayCommand(AddProjectAsync);
 
             // 加载MSBuild版本
             LoadMSBuildVersions();
@@ -228,6 +229,7 @@ namespace DotNetBuilder.ViewModels
         public ICommand OpenFolderCommand { get; }
         public ICommand OpenVSCommand { get; }
         public ICommand OpenVSCodeCommand { get; }
+        public ICommand AddProjectCommand { get; }
 
         #endregion
 
@@ -1101,6 +1103,60 @@ namespace DotNetBuilder.ViewModels
             {
                 AppendLog($"用 VSCode 打开失败: {ex.Message}\n");
                 AduMessageBox.Show($"用 VSCode 打开失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 手动添加项目
+        /// </summary>
+        private async Task AddProjectAsync()
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "选择Git项目目录"
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var projectPath = dialog.FolderName;
+
+            // 检查是否已存在
+            if (Projects.Any(p => p.Path.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
+            {
+                AduMessageBox.Show("该项目已在列表中", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            IsBusy = true;
+            AppendLog($"\n正在添加项目: {projectPath}\n");
+
+            try
+            {
+                var progress = new Progress<string>(msg => AppendLog(msg + "\n"));
+                var project = await _gitService.AddGitProjectAsync(projectPath, progress);
+
+                if (project == null)
+                {
+                    AppendLog("添加失败: 所选目录不是Git项目目录\n");
+                    AduMessageBox.Show("所选目录不包含 .git 文件夹，无法作为Git项目添加。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                project.SolutionPath = _gitService.GetSolutionPath(project.Path);
+                project.ProjectFilePath = _gitService.GetProjectFilePath(project.Path);
+                project.SortOrder = Projects.Count;
+                if (MSBuildVersions.Count > 0)
+                {
+                    project.SelectedMSBuildVersion = MSBuildVersions[0];
+                }
+
+                Projects.Add(project);
+                AppendLog($"已添加项目: {project.Name}\n");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 

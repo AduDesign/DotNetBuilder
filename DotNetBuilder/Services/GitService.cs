@@ -24,6 +24,10 @@ namespace DotNetBuilder.Services
 
             try
             {
+                // 先检查根目录本身是否就是Git项目目录
+                var rootGitDir = Path.Combine(rootPath, ".git");
+                bool rootIsGit = await Task.Run(() => Directory.Exists(rootGitDir));
+
                 // 将同步的目录扫描操作放到后台线程
                 var directories = await Task.Run(() =>
                 {
@@ -65,6 +69,20 @@ namespace DotNetBuilder.Services
                     }
                 }
 
+                // 如果根目录本身就是Git项目，添加到列表
+                if (rootIsGit)
+                {
+                    var rootProject = new GitProject
+                    {
+                        Name = Path.GetFileName(rootPath),
+                        Path = rootPath,
+                        IsDotNetProject = false,
+                        ProjectType = "Git Repository"
+                    };
+                    projects.Add(rootProject);
+                    found++;
+                }
+
                 // 批量检测.NET项目（异步）
                 progress?.Report($"正在检测项目类型...");
                 var dotnetProjects = await Task.Run(() =>
@@ -88,6 +106,38 @@ namespace DotNetBuilder.Services
 
             // 按名称排序
             return projects.OrderBy(p => p.Name).ToList();
+        }
+
+        /// <summary>
+        /// 手动添加一个Git项目（验证目录包含.git）
+        /// </summary>
+        public async Task<GitProject?> AddGitProjectAsync(string projectPath, IProgress<string>? progress = null)
+        {
+            if (string.IsNullOrEmpty(projectPath) || !Directory.Exists(projectPath))
+                return null;
+
+            var gitDir = Path.Combine(projectPath, ".git");
+            bool hasGit = await Task.Run(() => Directory.Exists(gitDir));
+            if (!hasGit)
+                return null;
+
+            var project = new GitProject
+            {
+                Name = Path.GetFileName(projectPath),
+                Path = projectPath,
+                IsDotNetProject = false,
+                ProjectType = "Git Repository"
+            };
+
+            // 检测项目类型
+            if (DetectDotNetProject(projectPath))
+            {
+                project.IsDotNetProject = true;
+                project.ProjectType = GetProjectTypeDescription(projectPath);
+            }
+
+            await UpdateProjectStatusAsync(project);
+            return project;
         }
 
         /// <summary>
