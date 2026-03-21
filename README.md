@@ -1,3 +1,5 @@
+![image](https://github.com/AduDesign/DotNetBuilder/blob/main/Builder.png?raw=true)
+
 # DotNetBuilder
 
 .NET 项目批量管理器 - 轻松管理多个 Git 仓库的代码同步与 MSBuild 构建。
