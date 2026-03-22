@@ -12,6 +12,7 @@ namespace DotNetBuilder.ViewModels
     {
         private readonly GitService _gitService;
         private readonly MSBuildService _msbuildService;
+        private readonly OutputViewModel _outputViewModel;
         private readonly Action<string> _appendLog;
         private GitProject? _selectedItem;
         private GitProject? _selectedProject;
@@ -20,10 +21,12 @@ namespace DotNetBuilder.ViewModels
         public ProjectListViewModel(
             GitService gitService,
             MSBuildService msbuildService,
+            OutputViewModel outputViewModel,
             Action<string> appendLog)
         {
             _gitService = gitService;
             _msbuildService = msbuildService;
+            _outputViewModel = outputViewModel;
             _appendLog = appendLog;
 
             MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
@@ -32,6 +35,8 @@ namespace DotNetBuilder.ViewModels
             OpenFolderCommand = new RelayCommand(OpenFolder);
             OpenVSCommand = new RelayCommand(OpenVS);
             OpenVSCodeCommand = new RelayCommand(OpenVSCode);
+            BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
+            RunSelectedCommand = new AsyncRelayCommand(RunSelectedAsync);
         }
 
         public ObservableCollection<GitProject> Projects { get; } = new();
@@ -98,6 +103,8 @@ namespace DotNetBuilder.ViewModels
         public ICommand OpenFolderCommand { get; }
         public ICommand OpenVSCommand { get; }
         public ICommand OpenVSCodeCommand { get; }
+        public ICommand BuildSingleCommand { get; }
+        public ICommand RunSelectedCommand { get; }
 
         public void LoadMSBuildVersions(IEnumerable<MSBuildVersion> versions)
         {
@@ -323,6 +330,84 @@ namespace DotNetBuilder.ViewModels
             foreach (var exe in exeFiles)
             {
                 Executables.Add(exe);
+            }
+        }
+
+        private async Task BuildSingleAsync(object? parameter)
+        {
+            if (parameter is not GitProject project) return;
+
+            if (project.SelectedMSBuildVersion == null)
+            {
+                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
+                return;
+            }
+
+            _outputViewModel.LogOutput = string.Empty;
+            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsBuilding = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
+                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
+
+                if (result.Success)
+                {
+                    project.IsExpanded = false;
+                    _appendLog($"[{project.Name}] 构建成功\n");
+                }
+                else
+                {
+                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsBuilding = false;
+            }
+        }
+
+        private async Task RunSelectedAsync(object? parameter)
+        {
+            GitProject? project = parameter as GitProject ?? SelectedItem;
+            if (project == null || string.IsNullOrEmpty(project.ExecuteFile))
+            {
+                _appendLog("无可运行的项目\n");
+                return;
+            }
+
+            _appendLog($"\n========== 运行项目: {project.Name} ==========\n");
+
+            try
+            {
+                var exePath = project.ExecuteFile;
+                var workingDir = System.IO.Path.GetDirectoryName(exePath) ?? project.Path;
+
+                _appendLog($"[{project.Name}] 启动: {exePath}\n");
+
+                var processStartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    WorkingDirectory = workingDir,
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 运行失败: {ex.Message}\n");
             }
         }
     }

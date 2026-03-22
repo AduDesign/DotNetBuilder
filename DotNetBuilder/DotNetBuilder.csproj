@@ -10,12 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="builder.ico" />
-    <None Remove="Builder.png" />
+    <Compile Remove="Configs\**" />
+    <EmbeddedResource Remove="Configs\**" />
+    <None Remove="Configs\**" />
+    <Page Remove="Configs\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Configs\Config.cs" />
+    <None Remove="builder.ico" />
+    <None Remove="Builder.png" />
   </ItemGroup>
 
   <ItemGroup>

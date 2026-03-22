@@ -45,7 +45,7 @@ namespace DotNetBuilder.ViewModels
             // 初始化子 ViewModels
             WelcomeViewModel = new WelcomeViewModel(_projectService, AppendLog);
             ToolbarViewModel = new ToolbarViewModel();
-            ProjectListViewModel = new ProjectListViewModel(_gitService, _msbuildService, AppendLog);
+            ProjectListViewModel = new ProjectListViewModel(_gitService, _msbuildService, OutputViewModel, AppendLog);
             OutputViewModel = new OutputViewModel();
             ConflictViewModel = new ConflictDialogViewModel();
             NewProjectViewModel = new NewProjectDialogViewModel();
@@ -128,7 +128,9 @@ namespace DotNetBuilder.ViewModels
         public ICommand SelectDirectoryCommand { get; private set; } = null!;
         public ICommand BuildSelectedCommand { get; private set; } = null!;
         public ICommand SyncSelectedCommand { get; private set; } = null!;
+        public ICommand SyncSingleCommand { get; private set; } = null!;
         public ICommand BuildSingleCommand { get; private set; } = null!;
+        public ICommand RunSelectedCommand { get; private set; } = null!;
         public ICommand SaveProjectCommand { get; private set; } = null!;
         public ICommand ClearLogCommand { get; private set; } = null!;
         public ICommand RegisterFileAssociationCommand { get; private set; } = null!;
@@ -143,7 +145,9 @@ namespace DotNetBuilder.ViewModels
             SelectDirectoryCommand = new AsyncRelayCommand(SelectDirectoryAsync);
             BuildSelectedCommand = new AsyncRelayCommand(BuildSelectedAsync, () => !IsBusy && Projects.Any(p => p.IsSelected && p.IsDotNetProject));
             SyncSelectedCommand = new AsyncRelayCommand(SyncSelectedAsync, () => !IsBusy && Projects.Any(p => p.IsSelected));
+            SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
             BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
+            RunSelectedCommand = new AsyncRelayCommand(RunSelectedAsync, () => SelectedProject != null && !string.IsNullOrEmpty(SelectedProject.ExecuteFile));
             SaveProjectCommand = new AsyncRelayCommand(SaveProjectAsync, () => HasProject);
             ClearLogCommand = new RelayCommand(_ => OutputViewModel.LogOutput = string.Empty);
             RegisterFileAssociationCommand = new RelayCommand(_ => RegisterFileAssociation());
@@ -185,15 +189,69 @@ namespace DotNetBuilder.ViewModels
 
         private async Task SelectDirectoryAsync()
         {
-            var dialog = new Microsoft.Win32.OpenFolderDialog
+            var dialog = new Microsoft.Win32.OpenFileDialog
             {
-                Title = "选择包含Git项目的目录"
+                Title = "打开 DotNetBuilder 项目",
+                Filter = "DotNetBuilder 项目 (*.bdproj)|*.bdproj|所有文件 (*.*)|*.*",
+                CheckFileExists = true
             };
 
             if (dialog.ShowDialog() == true)
             {
-                SelectedPath = dialog.FolderName;
-                await ScanProjectsAsync();
+                await OpenProjectFileAsync(dialog.FileName);
+            }
+        }
+
+        private async Task OpenProjectFileAsync(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                AppendLog($"项目文件不存在: {filePath}\n");
+                return;
+            }
+
+            AppendLog($"\n========== 打开项目: {filePath} ==========\n");
+
+            var project = await _projectService.OpenProjectAsync(filePath);
+            if (project == null)
+            {
+                AppendLog("项目加载失败\n");
+                return;
+            }
+
+            _projectService.SetCurrentProject(project);
+
+            IsBusy = true;
+            ProjectListViewModel.ClearProjects();
+
+            try
+            {
+                // 扫描项目
+                SelectedPath = project.RootPath;
+                await ProjectListViewModel.ScanProjectsAsync(project.RootPath);
+
+                // 应用保存的配置
+                foreach (var config in project.Projects)
+                {
+                    var gitProject = ProjectListViewModel.Projects.FirstOrDefault(p => p.Path == config.Path);
+                    if (gitProject != null)
+                    {
+                        gitProject.IsSelected = config.IsSelected;
+                        gitProject.SelectedMSBuildVersion = MSBuildVersions.FirstOrDefault(v => v.DisplayName == config.SelectedMSBuildVersion);
+                        gitProject.ExecuteFile = config.ExecuteFile ?? string.Empty;
+                        gitProject.Configuration = config.Configuration;
+                        gitProject.PullStrategy = config.PullStrategy;
+                        gitProject.ConflictAction = config.ConflictAction;
+                        gitProject.AutoCommitWhenNoMessage = config.AutoCommitWhenNoMessage;
+                    }
+                }
+
+                SelectedProject = ProjectListViewModel.Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
+                AppendLog($"\n========== 项目加载完成 ==========\n");
+            }
+            finally
+            {
+                IsBusy = false;
             }
         }
 
@@ -237,6 +295,8 @@ namespace DotNetBuilder.ViewModels
 
         private async Task BuildSelectedAsync()
         {
+            OutputViewModel.LogOutput = string.Empty;
+
             var selectedProjects = Projects.Where(p => p.IsSelected && p.IsDotNetProject).ToList();
             if (!selectedProjects.Any())
             {
@@ -375,6 +435,38 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        private async Task SyncSingleAsync(object? parameter)
+        {
+            if (parameter is not GitProject project)
+                return;
+
+            AppendLog($"\n========== 同步项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsSyncing = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => AppendLog($"[{project.Name}] {msg}\n"));
+                var options = OutputViewModel.GetSyncOptions();
+
+                await _gitService.UpdateProjectStatusAsync(project);
+                var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
+
+                await HandleSyncResultAsync(project, result, progress);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsSyncing = false;
+            }
+        }
+
         private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)
         {
             if (result.NeedsCommitMessage)
@@ -422,6 +514,8 @@ namespace DotNetBuilder.ViewModels
 
         private async Task BuildSingleAsync(object? parameter)
         {
+            OutputViewModel.LogOutput = string.Empty;
+
             if (parameter is not GitProject project)
                 return;
 
@@ -461,6 +555,38 @@ namespace DotNetBuilder.ViewModels
             finally
             {
                 project.IsBuilding = false;
+            }
+        }
+
+        private async Task RunSelectedAsync()
+        {
+            if (SelectedProject == null || string.IsNullOrEmpty(SelectedProject.ExecuteFile))
+            {
+                AduMessageBox.Show("请先选择要运行的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            AppendLog($"\n========== 运行项目: {SelectedProject.Name} ==========\n");
+
+            try
+            {
+                var exePath = SelectedProject.ExecuteFile;
+                var workingDir = Path.GetDirectoryName(exePath) ?? SelectedProject.Path;
+
+                AppendLog($"[{SelectedProject.Name}] 启动: {exePath}\n");
+
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    WorkingDirectory = workingDir,
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{SelectedProject.Name}] 运行失败: {ex.Message}\n");
             }
         }
 
