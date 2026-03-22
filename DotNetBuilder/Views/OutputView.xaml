@@ -1,159 +1,159 @@
 <UserControl
-    x:Class="DotNetBuilder.Views.OutputView"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
-    xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin">
+	x:Class="DotNetBuilder.Views.OutputView"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
+	xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin">
 
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+	<Grid Margin="10">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
 
-        <!-- 操作按钮 -->
-        <StackPanel
-            Margin="0,0,0,10"
-            IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}"
-            Orientation="Horizontal">
-            <AduSkin:AduFormBox Header="运行项目">
-                <AduSkin:AduComboBox
-                    Width="120"
-                    DisplayMemberPath="Path"
-                    ItemsSource="{Binding Projects}"
-                    SelectedItem="{Binding SelectedProject}" />
-            </AduSkin:AduFormBox>
-            <AduSkin:AduButton
-                Width="Auto"
-                Margin="10,0,0,0"
-                Padding="10,0"
-                Command="{Binding RunSelectedCommand}"
-                Content="运行程序" />
-            <AduSkin:AduButton
-                Width="Auto"
-                Margin="10,0,0,0"
-                Padding="10,0"
-                Command="{Binding SyncSelectedCommand}"
-                Content="一键Git同步" />
-            <AduSkin:AduButton
-                Width="Auto"
-                Margin="10,0,0,0"
-                Padding="10,0"
-                Command="{Binding BuildSelectedCommand}"
-                Content="一键构建" />
-        </StackPanel>
+		<!--  操作按钮  -->
+		<StackPanel IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}">
+			<StackPanel Orientation="Horizontal">
+				<AduSkin:AduButton
+					Width="Auto"
+					Padding="10,0"
+					Command="{Binding SyncSelectedCommand}"
+					Content="一键Git同步" />
+				<AduSkin:AduFormBox Margin="5,0,0,0" Header="Git同步:">
+					<StackPanel Orientation="Horizontal">
+						<AduSkin:AduComboBox
+							Width="90"
+							Margin="10,0,0,0"
+							DisplayMemberPath=""
+							ItemsSource="{Binding PullStrategies}"
+							SelectedItem="{Binding GlobalPullStrategy}"
+							ToolTip="Pull 策略" />
+						<AduSkin:AduComboBox
+							Width="90"
+							Margin="5,0,0,0"
+							DisplayMemberPath=""
+							ItemsSource="{Binding ConflictActions}"
+							SelectedItem="{Binding GlobalConflictAction}"
+							ToolTip="冲突时处理方式" />
+						<AduSkin:AduCheckBox
+							Margin="5,0,0,0"
+							Content="无信息时自动提交"
+							IsChecked="{Binding GlobalAutoCommitWhenNoMessage}"
+							ToolTip="未填写提交信息时，使用默认信息提交" />
+					</StackPanel>
+				</AduSkin:AduFormBox>
+			</StackPanel>
 
-        <!-- 日志过滤选项 -->
-        <StackPanel
-            Grid.Row="1"
-            Margin="0,0,0,10"
-            IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}"
-            Orientation="Horizontal">
-            <TextBlock
-                VerticalAlignment="Center"
-                Foreground="#666"
-                Text="日志过滤:" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
-                AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource ErrorBrush}"
-                Content="错误"
-                Foreground="{DynamicResource ErrorBrush}"
-                IsChecked="{Binding ShowErrorLog}" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
-                AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource WarnBrush}"
-                Content="警告"
-                Foreground="{DynamicResource WarnBrush}"
-                IsChecked="{Binding ShowWarningLog}" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource InfoBrush}"
-                AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource InfoBrush}"
-                Content="消息"
-                Foreground="{DynamicResource InfoBrush}"
-                IsChecked="{Binding ShowMessageLog}" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource SuccessBrush}"
-                AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource SuccessBrush}"
-                Content="Git"
-                Foreground="{DynamicResource SuccessBrush}"
-                IsChecked="{Binding ShowGitLog}" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource StringPinBrush}"
-                AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource StringPinBrush}"
-                Content="Build"
-                Foreground="{DynamicResource StringPinBrush}"
-                IsChecked="{Binding ShowBuildLog}"
-                ToolTip="MSBuild编译详细输出（文件路径等），默认不显示" />
+			<Grid>
+				<AduSkin:AduButton
+					Width="Auto"
+					Margin="0,5"
+					Padding="10,0"
+					HorizontalAlignment="Left"
+					Command="{Binding BuildSelectedCommand}"
+					Content="一键构建" />
+				<StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+					<AduSkin:AduFormBox Header="运行项目">
+						<AduSkin:AduComboBox
+							Width="120"
+							DisplayMemberPath="Path"
+							ItemsSource="{Binding Projects}"
+							SelectedItem="{Binding SelectedProject}" />
+					</AduSkin:AduFormBox>
 
-            <Separator
-                Width="1"
-                Height="20"
-                Margin="15,0"
-                Background="#DDD" />
+					<AduSkin:AduButton
+						Width="Auto"
+						Margin="10,0,0,0"
+						Padding="10,0"
+						Command="{Binding RunSelectedCommand}"
+						Content="运行程序" />
+				</StackPanel>
+			</Grid>
 
-            <TextBlock
-                VerticalAlignment="Center"
-                Foreground="#666"
-                Text="Git同步:" />
-            <AduSkin:AduComboBox
-                Width="90"
-                Margin="10,0,0,0"
-                DisplayMemberPath=""
-                ItemsSource="{Binding PullStrategies}"
-                SelectedItem="{Binding GlobalPullStrategy}"
-                ToolTip="Pull 策略" />
-            <AduSkin:AduComboBox
-                Width="90"
-                Margin="5,0,0,0"
-                DisplayMemberPath=""
-                ItemsSource="{Binding ConflictActions}"
-                SelectedItem="{Binding GlobalConflictAction}"
-                ToolTip="冲突时处理方式" />
-            <AduSkin:AduCheckBox
-                Margin="10,0,0,0"
-                Content="无信息时自动提交"
-                IsChecked="{Binding GlobalAutoCommitWhenNoMessage}"
-                ToolTip="未填写提交信息时，使用默认信息提交" />
-        </StackPanel>
+		</StackPanel>
 
-        <!-- 日志输出 -->
-        <AduSkin:AduGroupBox Grid.Row="2" VerticalContentAlignment="Stretch">
-            <AduSkin:AduGroupBox.Header>
-                <Grid>
-                    <TextBlock VerticalAlignment="Center" Text="输出日志" />
-                    <AduSkin:AduButton
-                        Width="40"
-                        Height="Auto"
-                        HorizontalAlignment="Right"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Command="{Binding ClearLogCommand}"
-                        Content="清空"
-                        FontSize="11"
-                        Foreground="{DynamicResource PrimaryBrush}"
-                        IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}" />
-                </Grid>
-            </AduSkin:AduGroupBox.Header>
+		<!--  日志过滤选项  -->
+		<StackPanel
+			Grid.Row="1"
+			Margin="0,10"
+			IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}"
+			Orientation="Horizontal">
+			<TextBlock
+				VerticalAlignment="Center"
+				Foreground="#666"
+				Text="日志过滤:" />
+			<AduSkin:AduCheckBox
+				Margin="10,0,0,0"
+				AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
+				AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource ErrorBrush}"
+				Content="错误"
+				Foreground="{DynamicResource ErrorBrush}"
+				IsChecked="{Binding ShowErrorLog}" />
+			<AduSkin:AduCheckBox
+				Margin="10,0,0,0"
+				AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
+				AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource WarnBrush}"
+				Content="警告"
+				Foreground="{DynamicResource WarnBrush}"
+				IsChecked="{Binding ShowWarningLog}" />
+			<AduSkin:AduCheckBox
+				Margin="10,0,0,0"
+				AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource InfoBrush}"
+				AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource InfoBrush}"
+				Content="消息"
+				Foreground="{DynamicResource InfoBrush}"
+				IsChecked="{Binding ShowMessageLog}" />
+			<AduSkin:AduCheckBox
+				Margin="10,0,0,0"
+				AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource SuccessBrush}"
+				AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource SuccessBrush}"
+				Content="Git"
+				Foreground="{DynamicResource SuccessBrush}"
+				IsChecked="{Binding ShowGitLog}" />
+			<AduSkin:AduCheckBox
+				Margin="10,0,0,0"
+				AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource StringPinBrush}"
+				AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource StringPinBrush}"
+				Content="Build"
+				Foreground="{DynamicResource StringPinBrush}"
+				IsChecked="{Binding ShowBuildLog}"
+				ToolTip="MSBuild编译详细输出（文件路径等），默认不显示" />
+		</StackPanel>
 
-            <AduSkin:AduTextBox
-                Height="Auto"
-                VerticalAlignment="Stretch"
-                VerticalContentAlignment="Top"
-                AduAttach:BorderAttach.CornerRadius="0,0,6,6"
-                BorderThickness="0"
-                FontSize="10"
-                IsAutoScrollToBottom="True"
-                IsReadOnly="True"
-                MultipleLine="True"
-                Text="{Binding LogOutput}"
-                TextWrapping="Wrap"
-                VerticalScrollBarVisibility="Auto" />
-        </AduSkin:AduGroupBox>
-    </Grid>
+		<!--  日志输出  -->
+		<AduSkin:AduGroupBox Grid.Row="2" VerticalContentAlignment="Stretch">
+			<AduSkin:AduGroupBox.Header>
+				<Grid>
+					<TextBlock VerticalAlignment="Center" Text="输出日志" />
+					<AduSkin:AduButton
+						Width="40"
+						Height="Auto"
+						HorizontalAlignment="Right"
+						Background="Transparent"
+						BorderThickness="0"
+						Command="{Binding ClearLogCommand}"
+						Content="清空"
+						FontSize="11"
+						Foreground="{DynamicResource PrimaryBrush}"
+						IsEnabled="{Binding IsEnabled, Converter={StaticResource BooleanReverseConverter}}" />
+				</Grid>
+			</AduSkin:AduGroupBox.Header>
+
+			<AduSkin:AduTextBox
+				Height="Auto"
+				VerticalAlignment="Stretch"
+				VerticalContentAlignment="Top"
+				AduAttach:BorderAttach.CornerRadius="0,0,6,6"
+				BorderThickness="0"
+				FontSize="10"
+				IsAutoScrollToBottom="True"
+				IsReadOnly="True"
+				MultipleLine="True"
+				Text="{Binding LogOutput}"
+				TextWrapping="Wrap"
+				VerticalScrollBarVisibility="Auto" />
+		</AduSkin:AduGroupBox>
+	</Grid>
 </UserControl>
