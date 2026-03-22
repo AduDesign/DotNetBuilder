@@ -15,6 +15,7 @@
 
             <!--  注册自定义转换器  -->
             <converters:BoolToInverseConverter x:Key="BoolToInverseConverter" />
+            <converters:BooleanToReVisibilityConverter x:Key="BooleanReverseConverter" />
             <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <converters:HasChangesToBrushConverter x:Key="HasChangesToBrushConverter" />
             <converters:HasChangesToIconConverter x:Key="HasChangesToIconConverter" />
@@ -47,6 +48,9 @@
                 x:Key="PrimaryBrush90"
                 Opacity=".9"
                 Color="{DynamicResource PrimaryColor}" />
+            <SolidColorBrush
+                x:Key="NormalTransparentBrush"
+                Color="Transparent" />
 
             <!--  自定义样式  -->
             <Style x:Key="ProjectItemStyle" TargetType="Border">
@@ -61,6 +65,14 @@
             <Style BasedOn="{StaticResource AduButton}" TargetType="AduSkin:AduButton">
                 <Setter Property="Width" Value="Auto" />
                 <Setter Property="Padding" Value="6,0" />
+            </Style>
+
+            <!--  主色调按钮样式  -->
+            <Style x:Key="AduButtonPrimary" TargetType="AduSkin:AduButton">
+                <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="Width" Value="Auto" />
+                <Setter Property="Padding" Value="15,10" />
             </Style>
 
             <Geometry x:Key="Icon_Play">M239.433143 874.788571c17.133714 0 31.707429-6.857143 48.859428-16.713142l499.712-288.859429c35.565714-21.010286 48-34.724571 48-57.417143 0-22.729143-12.434286-36.443429-48-57.014857L288.292571 165.504c-17.152-9.874286-31.725714-16.274286-48.859428-16.274286-31.725714 0-51.437714 23.990857-51.437714 61.257143v602.587429c0 37.284571 19.712 61.714286 51.437714 61.714285z m21.851428-81.865142c-2.56 0-4.278857-1.700571-4.278857-5.138286V235.776c0-3.419429 1.700571-5.12 4.278857-5.12 1.718857 0 3.437714 0.841143 5.138286 2.121143l474.441143 274.285714c2.139429 1.28 3.84 2.578286 3.84 4.717714 0 2.139429-1.700571 3.858286-3.84 4.717715L266.422857 791.222857c-1.700571 0.841143-3.419429 1.700571-5.12 1.700572z</Geometry>

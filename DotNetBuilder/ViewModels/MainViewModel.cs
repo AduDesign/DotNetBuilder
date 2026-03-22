@@ -30,7 +30,10 @@ namespace DotNetBuilder.ViewModels
         private readonly GitSyncService _gitSyncService;
         private readonly MSBuildService _msbuildService;
         private readonly ConfigService _configService;
+        private readonly ProjectService _projectService;
+        private readonly FileAssociationService _fileAssociationService;
         private readonly SyncViewModel _syncViewModel;
+        private readonly ProjectViewModel _projectViewModel;
 
         private string _selectedPath = string.Empty;
         private string _logOutput = string.Empty;
@@ -51,12 +54,18 @@ namespace DotNetBuilder.ViewModels
         private ConflictAction _globalConflictAction = ConflictAction.Prompt;
         private bool _globalAutoCommitWhenNoMessage = false;
 
+        // 新建项目对话框
+        private string _newProjectName = "新项目";
+        private string _newProjectRootPath = string.Empty;
+
         public MainViewModel()
         {
             _gitService = new GitService();
             _gitSyncService = new GitSyncService();
             _msbuildService = new MSBuildService();
             _configService = new ConfigService();
+            _projectService = new ProjectService();
+            _fileAssociationService = new FileAssociationService();
 
             // 初始化 SyncViewModel
             _syncViewModel = new SyncViewModel(
@@ -65,6 +74,19 @@ namespace DotNetBuilder.ViewModels
                 msg => AppendLog(msg),
                 GetSyncOptions,
                 () => Projects.Where(p => p.IsSelected));
+
+            // 初始化 ProjectViewModel
+            _projectViewModel = new ProjectViewModel(
+                _projectService,
+                msg => AppendLog(msg));
+
+            // 订阅新建项目对话框事件
+            _projectViewModel.OnShowNewProjectDialogRequested += () =>
+            {
+                NewProjectName = "新项目";
+                NewProjectRootPath = string.Empty;
+                OnPropertyChanged(nameof(ShowNewProjectDialog));
+            };
 
             // 初始化命令
             SelectDirectoryCommand = new AsyncRelayCommand(SelectDirectoryAsync);
@@ -75,7 +97,6 @@ namespace DotNetBuilder.ViewModels
             MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
             ClearLogCommand = new RelayCommand(_ => LogOutput = string.Empty);
             RefreshStatusCommand = new AsyncRelayCommand(RefreshStatusAsync);
-            SaveConfigCommand = new AsyncRelayCommand(SaveConfigAsync, () => Projects.Any());
 
             // 单个项目操作命令
             BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
@@ -85,11 +106,16 @@ namespace DotNetBuilder.ViewModels
             OpenVSCodeCommand = new RelayCommand(OpenVSCode);
             AddProjectCommand = new AsyncRelayCommand(AddProjectAsync);
 
+            // 新建项目对话框命令
+            BrowseNewProjectRootCommand = new RelayCommand(BrowseNewProjectRoot);
+            ConfirmNewProjectCommand = new RelayCommand(ConfirmNewProject, CanConfirmNewProject);
+            CancelNewProjectCommand = new RelayCommand(CancelNewProject);
+
+            // 文件关联命令
+            RegisterFileAssociationCommand = new RelayCommand(_ => RegisterFileAssociation());
+
             // 加载MSBuild版本
             LoadMSBuildVersions();
-
-            // 自动加载配置
-            _ = LoadConfigAsync();
         }
 
         #region 属性
@@ -312,6 +338,59 @@ namespace DotNetBuilder.ViewModels
             }
         }
         public string ConflictFileList => _syncViewModel.ConflictFileList;
+
+        // 项目命令 - 委托给 ProjectViewModel
+        public ICommand NewProjectCommand => _projectViewModel.NewProjectCommand;
+        public ICommand OpenProjectCommand => _projectViewModel.OpenProjectCommand;
+        public ICommand SaveProjectCommand => _projectViewModel.SaveProjectCommand;
+        public ICommand SaveProjectAsCommand => _projectViewModel.SaveProjectAsCommand;
+        public ICommand CloseProjectCommand => _projectViewModel.CloseProjectCommand;
+
+        // 新建项目对话框命令
+        public ICommand BrowseNewProjectRootCommand { get; private set; }
+        public ICommand ConfirmNewProjectCommand { get; private set; }
+        public ICommand CancelNewProjectCommand { get; private set; }
+
+        // 文件关联命令
+        public ICommand RegisterFileAssociationCommand { get; private set; }
+        public bool IsFileAssociationRegistered => _fileAssociationService.IsFileAssociationRegistered();
+
+        // 项目属性
+        public bool HasProject => _projectViewModel.HasProject;
+        public bool HasUnsavedChanges => _projectViewModel.HasUnsavedChanges;
+        public string ProjectDisplayName => _projectViewModel.ProjectDisplayName;
+        public ObservableCollection<RecentProject> RecentProjects => _projectViewModel.RecentProjects;
+        public bool ShowNewProjectDialog
+        {
+            get => _projectViewModel.ShowNewProjectDialog;
+            set
+            {
+                _projectViewModel.ShowNewProjectDialog = value;
+                OnPropertyChanged();
+            }
+        }
+        public bool ShowRecentProjectsMenu
+        {
+            get => _projectViewModel.ShowRecentProjectsMenu;
+            set
+            {
+                _projectViewModel.ShowRecentProjectsMenu = value;
+                OnPropertyChanged();
+            }
+        }
+
+        // 新建项目对话框属性
+        public string NewProjectName
+        {
+            get => _newProjectName;
+            set => SetProperty(ref _newProjectName, value);
+        }
+
+        public string NewProjectRootPath
+        {
+            get => _newProjectRootPath;
+            set => SetProperty(ref _newProjectRootPath, value);
+        }
 
         #endregion
 
@@ -1140,6 +1219,225 @@ namespace DotNetBuilder.ViewModels
             if (e.PropertyName == nameof(GitProject.IsSelected))
                 OnPropertyChanged(nameof(IsSelectedAll));
         }
+
+        /// <summary>
+        /// 浏览新建项目根目录
+        /// </summary>
+        private void BrowseNewProjectRoot()
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "选择包含 Git 项目的根目录"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                NewProjectRootPath = dialog.FolderName;
+            }
+        }
+
+        /// <summary>
+        /// 确认新建项目
+        /// </summary>
+        private void ConfirmNewProject()
+        {
+            if (string.IsNullOrWhiteSpace(NewProjectName))
+            {
+                AduMessageBox.Show("请输入项目名称", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(NewProjectRootPath))
+            {
+                AduMessageBox.Show("请选择项目根目录", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            if (!Directory.Exists(NewProjectRootPath))
+            {
+                AduMessageBox.Show("项目根目录不存在", "错误", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return;
+            }
+
+            // 关闭对话框
+            ShowNewProjectDialog = false;
+
+            // 创建项目
+            CreateProjectFromDialog(NewProjectName, NewProjectRootPath);
+        }
+
+        /// <summary>
+        /// 检查是否可以确认新建项目
+        /// </summary>
+        private bool CanConfirmNewProject()
+        {
+            return !string.IsNullOrWhiteSpace(NewProjectName) &&
+                   !string.IsNullOrWhiteSpace(NewProjectRootPath);
+        }
+
+        /// <summary>
+        /// 取消新建项目
+        /// </summary>
+        private void CancelNewProject()
+        {
+            ShowNewProjectDialog = false;
+            NewProjectName = "新项目";
+            NewProjectRootPath = string.Empty;
+        }
+
+        /// <summary>
+        /// 注册 .bdproj 文件关联
+        /// </summary>
+        private void RegisterFileAssociation()
+        {
+            if (_fileAssociationService.RegisterFileAssociation())
+            {
+                OnPropertyChanged(nameof(IsFileAssociationRegistered));
+                AppendLog("已成功注册 .bdproj 文件关联\n");
+                AduMessageBox.Show(
+                    "已成功注册 .bdproj 文件关联。\n双击 .bdproj 文件即可用 DotNetBuilder 打开。",
+                    "提示",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            else
+            {
+                AduMessageBox.Show(
+                    "注册文件关联失败，请重试。",
+                    "错误",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        /// <summary>
+        /// 从新建项目对话框创建项目
+        /// </summary>
+        public void CreateProjectFromDialog(string name, string rootPath)
+        {
+            // 清空现有项目列表
+            foreach (var p in Projects)
+            {
+                p.PropertyChanged -= Project_PropertyChanged;
+            }
+            Projects.Clear();
+
+            // 设置新项目的根目录
+            SelectedPath = rootPath;
+            _projectViewModel.CreateNewProject(name, rootPath);
+
+            // 扫描 Git 项目
+            _ = ScanProjectsAsync();
+
+            OnPropertyChanged(nameof(HasProject));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ProjectDisplayName));
+        }
+
+        /// <summary>
+        /// 打开项目时加载项目配置
+        /// </summary>
+        public void LoadProjectConfig(Models.ProjectInfo project)
+        {
+            // 清空现有项目列表
+            foreach (var p in Projects)
+            {
+                p.PropertyChanged -= Project_PropertyChanged;
+            }
+            Projects.Clear();
+
+            // 设置根目录
+            SelectedPath = project.RootPath;
+
+            // 扫描 Git 项目
+            _ = Task.Run(async () =>
+            {
+                var progress = new Progress<string>(msg => AppendLog(msg + "\n"));
+                var gitProjects = await _gitService.ScanGitProjectsAsync(project.RootPath, progress);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    int sortOrder = 0;
+                    foreach (var gitProject in gitProjects)
+                    {
+                        gitProject.SolutionPath = _gitService.GetSolutionPath(gitProject.Path);
+                        gitProject.ProjectFilePath = _gitService.GetProjectFilePath(gitProject.Path);
+                        gitProject.SortOrder = sortOrder++;
+
+                        // 应用保存的配置
+                        var config = project.Projects.FirstOrDefault(c => c.Path == gitProject.Path);
+                        if (config != null)
+                        {
+                            gitProject.IsSelected = config.IsSelected;
+                            gitProject.SelectedMSBuildVersion = MSBuildVersions.FirstOrDefault(v => v.DisplayName == config.SelectedMSBuildVersion);
+                            gitProject.ExecuteFile = config.ExecuteFile ?? string.Empty;
+                            gitProject.Configuration = config.Configuration;
+                            gitProject.PullStrategy = config.PullStrategy;
+                            gitProject.ConflictAction = config.ConflictAction;
+                            gitProject.AutoCommitWhenNoMessage = config.AutoCommitWhenNoMessage;
+                        }
+
+                        if (MSBuildVersions.Count > 0 && gitProject.SelectedMSBuildVersion == null)
+                            gitProject.SelectedMSBuildVersion = MSBuildVersions[0];
+
+                        gitProject.PropertyChanged += Project_PropertyChanged;
+                        Projects.Add(gitProject);
+                    }
+
+                    AppendLog($"\n已加载 {Projects.Count} 个 Git 项目\n");
+                });
+            });
+
+            OnPropertyChanged(nameof(HasProject));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ProjectDisplayName));
+        }
+
+        /// <summary>
+        /// 保存项目时获取项目配置
+        /// </summary>
+        public Models.ProjectInfo GetCurrentProjectConfig()
+        {
+            var project = _projectViewModel.CurrentProject ?? new Models.ProjectInfo
+            {
+                Name = ProjectDisplayName.Replace(" *", ""),
+                RootPath = SelectedPath
+            };
+
+            project.Projects = Projects.Select(p => new Models.ProjectConfig
+            {
+                Path = p.Path,
+                IsSelected = p.IsSelected,
+                SelectedMSBuildVersion = p.SelectedMSBuildVersion?.DisplayName,
+                ExecuteFile = p.ExecuteFile,
+                Configuration = p.Configuration,
+                Order = p.SortOrder,
+                PullStrategy = p.PullStrategy,
+                ConflictAction = p.ConflictAction,
+                AutoCommitWhenNoMessage = p.AutoCommitWhenNoMessage
+            }).ToList();
+
+            return project;
+        }
+
+        /// <summary>
+        /// 从命令行打开项目
+        /// </summary>
+        public async Task OpenProjectFromCommandLineAsync(string filePath)
+        {
+            var project = await _projectService.OpenProjectAsync(filePath);
+            if (project != null)
+            {
+                _projectViewModel.CurrentProject = project;
+                _projectViewModel.ProjectName = project.Name;
+                _projectViewModel.HasUnsavedChanges = false;
+
+                LoadProjectConfig(project);
+
+                await _projectService.AddRecentProjectAsync(project.Name, filePath);
+            }
+        }
+
         #endregion
     }
 }

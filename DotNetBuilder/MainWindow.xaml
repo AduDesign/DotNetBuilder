@@ -10,8 +10,90 @@
 	Height="900"
 	MinWidth="600"
 	MinHeight="600"
+	AduAttach:HeaderAttach.Background="{DynamicResource NormalTransparentBrush}"
+	AduAttach:HeaderAttach.FontSize="14"
+	AduAttach:HeaderAttach.Foreground="{DynamicResource NormalForeground}"
+	AduAttach:HeaderAttach.Height="40"
+	AduAttach:HeaderAttach.IconWidth="20"
+	AduAttach:HeaderAttach.Margin="0,0,0,0"
+	AduAttach:HeaderAttach.Visible="Visible"
 	Icon="builder.ico"
 	WindowStartupLocation="CenterScreen">
+	<AduSkin:AduWindow.Menu>
+		<!--  菜单栏  -->
+		<AduSkin:AduTitleMenu Margin="10,0" HorizontalAlignment="Left">
+			<AduSkin:AduTitleMenuItem HorizontalAlignment="Left" Header="文件(_F)">
+				<AduSkin:AduMenuItem
+					Command="{Binding NewProjectCommand}"
+					Header="新建项目(_N)"
+					InputGestureText="Ctrl+N">
+					<AduSkin:AduMenuItem.Icon>
+						<TextBlock
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Text="&#xE710;" />
+					</AduSkin:AduMenuItem.Icon>
+				</AduSkin:AduMenuItem>
+				<AduSkin:AduMenuItem
+					Command="{Binding OpenProjectCommand}"
+					Header="打开项目(_O)"
+					InputGestureText="Ctrl+O">
+					<AduSkin:AduMenuItem.Icon>
+						<TextBlock
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Text="&#xE838;" />
+					</AduSkin:AduMenuItem.Icon>
+				</AduSkin:AduMenuItem>
+				<AduSkin:AduMenuItem
+					Command="{Binding SaveProjectCommand}"
+					Header="保存项目(_S)"
+					InputGestureText="Ctrl+S">
+					<AduSkin:AduMenuItem.Icon>
+						<TextBlock
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Text="&#xE74E;" />
+					</AduSkin:AduMenuItem.Icon>
+				</AduSkin:AduMenuItem>
+				<Separator />
+				<AduSkin:AduMenuItem
+					x:Name="RecentProjectsMenu"
+					Header="最近项目(_R)"
+					ItemsSource="{Binding RecentProjects}">
+					<AduSkin:AduMenuItem.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Name}" ToolTip="{Binding FilePath}" />
+						</DataTemplate>
+					</AduSkin:AduMenuItem.ItemTemplate>
+					<AduSkin:AduMenuItem.ItemContainerStyle>
+						<Style TargetType="MenuItem">
+							<EventSetter Event="Click" Handler="RecentProject_Click" />
+						</Style>
+					</AduSkin:AduMenuItem.ItemContainerStyle>
+				</AduSkin:AduMenuItem>
+				<Separator />
+				<AduSkin:AduMenuItem Command="{Binding CloseProjectCommand}" Header="关闭项目(_C)">
+					<AduSkin:AduMenuItem.Icon>
+						<TextBlock
+							FontFamily="Segoe MDL2 Assets"
+							FontSize="12"
+							Text="&#xE711;" />
+					</AduSkin:AduMenuItem.Icon>
+				</AduSkin:AduMenuItem>
+			</AduSkin:AduTitleMenuItem>
+			<AduSkin:AduTitleMenuItem Header="编辑(_E)">
+				<AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志" />
+			</AduSkin:AduTitleMenuItem>
+			<AduSkin:AduTitleMenuItem Header="帮助(_H)">
+				<AduSkin:AduMenuItem Command="{Binding RegisterFileAssociationCommand}" Header="注册 .bdproj 文件关联">
+					<AduSkin:AduMenuItem.ToolTip>双击 .bdproj 文件用 DotNetBuilder 打开</AduSkin:AduMenuItem.ToolTip>
+				</AduSkin:AduMenuItem>
+				<Separator />
+				<AduSkin:AduMenuItem Click="About_Click" Header="关于" />
+			</AduSkin:AduTitleMenuItem>
+		</AduSkin:AduTitleMenu>
+	</AduSkin:AduWindow.Menu>
 	<Grid Background="{DynamicResource PanelBackground}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -23,63 +105,98 @@
 				MaxHeight="600" />
 		</Grid.RowDefinitions>
 
-		<!--  工具栏  -->
+		<!--  工具栏（项目已打开时显示）  -->
 		<Border
 			Padding="10"
 			BorderBrush="#E0E0E0"
 			BorderThickness="0,0,0,1"
-			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
-			<Grid>
+			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+			Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibilityConverter}}">
+			<Grid Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibilityConverter}}">
 				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="Auto" />
 					<ColumnDefinition Width="*" />
 					<ColumnDefinition Width="Auto" />
 				</Grid.ColumnDefinitions>
 
-				<!--  目录选择  -->
-				<StackPanel Grid.Column="0" Orientation="Horizontal">
+				<!--  项目名称  -->
+				<StackPanel
+					Grid.Column="0"
+					VerticalAlignment="Center"
+					Orientation="Horizontal">
+					<TextBlock
+						VerticalAlignment="Center"
+						FontSize="14"
+						FontWeight="Bold"
+						Foreground="{DynamicResource PrimaryBrush}"
+						Text="{Binding ProjectDisplayName}" />
 					<AduSkin:AduButton
-						Width="80"
-						Margin="0,0,8,0"
-						Command="{Binding SelectDirectoryCommand}"
-						Content="选择目录" />
+						Margin="10,0,0,0"
+						Padding="8,4"
+						Command="{Binding NewProjectCommand}"
+						Content="新建项目"
+						ToolTip="创建新项目" />
 					<AduSkin:AduButton
-						Width="80"
-						Margin="0,0,15,0"
-						Command="{Binding AddProjectCommand}"
-						Content="添加项目" />
+						Margin="5,0,0,0"
+						Padding="8,4"
+						Command="{Binding OpenProjectCommand}"
+						Content="打开项目"
+						ToolTip="打开已有项目" />
+					<AduSkin:AduButton
+						Margin="5,0,0,0"
+						Padding="8,4"
+						Command="{Binding SaveProjectCommand}"
+						Content="保存项目"
+						ToolTip="保存当前项目"
+						Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibilityConverter}}" />
+				</StackPanel>
 
+				<!--  目录选择  -->
+				<StackPanel
+					Grid.Column="1"
+					Margin="30,0,0,0"
+					VerticalAlignment="Center"
+					Orientation="Horizontal">
 					<TextBlock
 						Margin="0,0,10,0"
 						VerticalAlignment="Center"
 						Foreground="#666"
-						Text="当前目录:" />
+						Text="根目录:" />
 					<AduSkin:AduTextBox
-						MaxWidth="300"
+						Width="200"
 						VerticalAlignment="Center"
 						BorderThickness="0"
 						IsReadOnly="True"
 						Text="{Binding SelectedPath}" />
-
-					<TextBlock
-						VerticalAlignment="Center"
-						Foreground="#888"
-						Text="{Binding Projects.Count, StringFormat=' ({0} 个项目)'}"
-						Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}}" />
+					<AduSkin:AduButton
+						Width="70"
+						Margin="8,0,0,0"
+						Command="{Binding SelectDirectoryCommand}"
+						Content="浏览"
+						ToolTip="选择根目录" />
 				</StackPanel>
 
-				<!--  全选/取消全选  -->
-				<StackPanel Grid.Column="2" Orientation="Horizontal">
+				<!--  Git 操作  -->
+				<StackPanel
+					Grid.Column="3"
+					VerticalAlignment="Center"
+					Orientation="Horizontal">
+					<AduSkin:AduButton
+						Margin="0,0,8,0"
+						Command="{Binding AddProjectCommand}"
+						Content="添加 Git 项目"
+						IsEnabled="{Binding HasProject}"
+						ToolTip="从根目录下扫描 Git 项目" />
 					<AduSkin:AduButton
 						Margin="0,0,8,0"
 						Command="{Binding RefreshStatusCommand}"
 						Content="刷新状态" />
-					<AduSkin:AduButton Command="{Binding SaveConfigCommand}" Content="保存" />
 				</StackPanel>
 			</Grid>
 		</Border>
 
-		<!--  主内容区域 - 项目列表  -->
+		<!--  主内容区域 - 项目列表（项目已打开时显示）  -->
 		<Border
 			Grid.Row="1"
 			Margin="10"
@@ -87,7 +204,8 @@
 			BorderBrush="{DynamicResource NormalBorderBrush}"
 			BorderThickness="1"
 			CornerRadius="8"
-			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
+			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+			Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibilityConverter}}">
 			<Grid>
 				<Grid.RowDefinitions>
 					<RowDefinition Height="Auto" />
@@ -646,7 +764,7 @@
 		</Grid>
 
 		<!--  加载中遮罩  -->
-		<Border Grid.RowSpan="2" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+		<Border Grid.RowSpan="4" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
 			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
 				<AduSkin:AduLoading
 					Width="100"
@@ -723,6 +841,211 @@
 							Padding="15,8"
 							Command="{Binding ResolveConflictAbortCommand}"
 							Content="放弃 Pull" />
+					</StackPanel>
+				</StackPanel>
+			</Border>
+		</Border>
+
+		<!--  欢迎页面（无项目时显示）  -->
+		<Border
+			Grid.RowSpan="4"
+			Background="{DynamicResource NormalBackground}"
+			Visibility="{Binding HasProject, Converter={StaticResource BooleanToReVisibility}}">
+			<Grid Margin="20">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="300" />
+					<ColumnDefinition Width="*" />
+				</Grid.ColumnDefinitions>
+
+				<!--  左侧项目历史列表  -->
+				<Border
+					Grid.Column="0"
+					Margin="0,0,20,0"
+					Background="{DynamicResource WindowBackground}"
+					CornerRadius="8">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="*" />
+						</Grid.RowDefinitions>
+
+						<!--  标题栏  -->
+						<Border
+							Grid.Row="0"
+							Padding="15,12"
+							BorderBrush="#E0E0E0"
+							BorderThickness="0,0,0,1">
+							<TextBlock
+								FontSize="14"
+								FontWeight="SemiBold"
+								Text="最近项目" />
+						</Border>
+
+						<!--  项目列表  -->
+						<AduSkin:AduListBox
+							Grid.Row="1"
+							ItemsSource="{Binding RecentProjects}"
+							MouseDoubleClick="RecentProject_DoubleClick">
+							<AduSkin:AduListBox.ItemTemplate>
+								<DataTemplate>
+									<StackPanel Margin="5">
+										<TextBlock
+											FontSize="13"
+											FontWeight="Medium"
+											Text="{Binding Name}"
+											TextTrimming="CharacterEllipsis" />
+										<TextBlock
+											FontSize="11"
+											Foreground="#888"
+											Text="{Binding FilePath}"
+											TextTrimming="CharacterEllipsis"
+											ToolTip="{Binding FilePath}" />
+									</StackPanel>
+								</DataTemplate>
+							</AduSkin:AduListBox.ItemTemplate>
+							<AduSkin:AduListBox.ItemContainerStyle>
+								<Style TargetType="ListBoxItem">
+									<Setter Property="Padding" Value="10,8" />
+									<Setter Property="Cursor" Value="Hand" />
+									<EventSetter Event="MouseDoubleClick" Handler="RecentProject_DoubleClick" />
+								</Style>
+							</AduSkin:AduListBox.ItemContainerStyle>
+						</AduSkin:AduListBox>
+
+						<!--  空状态提示  -->
+						<StackPanel
+							Grid.Row="1"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							Visibility="{Binding RecentProjects.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+							<TextBlock
+								FontFamily="Segoe MDL2 Assets"
+								FontSize="32"
+								Foreground="#CCC"
+								Text="&#xE8B7;" />
+							<TextBlock
+								Margin="0,10,0,0"
+								Foreground="#999"
+								Text="暂无最近项目" />
+						</StackPanel>
+					</Grid>
+				</Border>
+
+				<!--  右侧操作区  -->
+				<StackPanel
+					Grid.Column="1"
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center">
+					<!--  应用图标/标题  -->
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontFamily="Segoe MDL2 Assets"
+						FontSize="64"
+						Foreground="{DynamicResource PrimaryBrush}"
+						Text="&#xE8F1;" />
+					<TextBlock
+						Margin="0,15,0,0"
+						HorizontalAlignment="Center"
+						FontSize="24"
+						FontWeight="Bold"
+						Foreground="{DynamicResource PrimaryBrush}"
+						Text=".NET Project Builder" />
+					<TextBlock
+						Margin="0,5,0,30"
+						HorizontalAlignment="Center"
+						FontSize="12"
+						Foreground="#888"
+						Text="批量管理 Git 仓库和 .NET 项目" />
+
+					<!--  操作按钮  -->
+					<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+						<AduSkin:AduButton
+							Width="120"
+							Height="40"
+							Background="{DynamicResource PrimaryBrush}"
+							Command="{Binding NewProjectCommand}"
+							Content="新建项目"
+							Foreground="White" />
+						<AduSkin:AduButton
+							Width="120"
+							Height="40"
+							Margin="15,0,0,0"
+							Command="{Binding OpenProjectCommand}"
+							Content="打开项目" />
+					</StackPanel>
+				</StackPanel>
+			</Grid>
+		</Border>
+
+		<!--  新建项目对话框  -->
+		<Border
+			Grid.RowSpan="5"
+			Background="#80000000"
+			Visibility="{Binding ShowNewProjectDialog, Converter={StaticResource BoolToVisibilityConverter}}">
+			<Border
+				Width="450"
+				Padding="20"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				Background="{DynamicResource WindowBackground}"
+				BorderBrush="{DynamicResource PrimaryBrush}"
+				BorderThickness="2"
+				CornerRadius="8">
+				<StackPanel>
+					<TextBlock
+						FontSize="18"
+						FontWeight="Bold"
+						Foreground="{DynamicResource PrimaryBrush}"
+						Text="新建项目" />
+					<TextBlock
+						Margin="0,15,0,5"
+						FontSize="14"
+						Text="项目名称:" />
+					<AduSkin:AduTextBox
+						x:Name="NewProjectNameBox"
+						Height="35"
+						Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}" />
+					<TextBlock
+						Margin="0,15,0,5"
+						FontSize="14"
+						Text="项目根目录:" />
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<AduSkin:AduTextBox
+							Height="35"
+							VerticalAlignment="Center"
+							IsReadOnly="True"
+							Text="{Binding NewProjectRootPath}" />
+						<AduSkin:AduButton
+							Grid.Column="1"
+							Margin="8,0,0,0"
+							Command="{Binding BrowseNewProjectRootCommand}"
+							Content="浏览..." />
+					</Grid>
+					<TextBlock
+						Margin="0,5,0,0"
+						FontSize="11"
+						Foreground="#888"
+						Text="选择包含 Git 项目的根目录" />
+					<StackPanel
+						Margin="0,20,0,0"
+						HorizontalAlignment="Right"
+						Orientation="Horizontal">
+						<AduSkin:AduButton
+							Width="Auto"
+							Margin="0,0,10,0"
+							Command="{Binding CancelNewProjectCommand}"
+							Content="取消" />
+						<AduSkin:AduButton
+							Width="Auto"
+							Margin="0,0,0,0"
+							Background="{DynamicResource PrimaryBrush}"
+							Command="{Binding ConfirmNewProjectCommand}"
+							Content="创建"
+							Foreground="White" />
 					</StackPanel>
 				</StackPanel>
 			</Border>

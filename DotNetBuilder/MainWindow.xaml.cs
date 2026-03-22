@@ -1,4 +1,8 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using AduSkin.Controls;
+using DotNetBuilder.Models;
 using DotNetBuilder.ViewModels;
 
 namespace DotNetBuilder
@@ -8,10 +12,48 @@ namespace DotNetBuilder
     /// </summary>
     public partial class MainWindow : AduWindow
     {
+        private MainViewModel ViewModel => (MainViewModel)DataContext;
+
         public MainWindow()
         {
             InitializeComponent();
             DataContext = new MainViewModel();
+            Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // 检查命令行参数（双击 .bdproj 文件打开）
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && args[1].EndsWith(".bdproj", StringComparison.OrdinalIgnoreCase))
+            {
+                await ViewModel.OpenProjectFromCommandLineAsync(args[1]);
+            }
+        }
+
+        private async void RecentProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.MenuItem menuItem && menuItem.DataContext is RecentProject recent)
+            {
+                await ViewModel.OpenProjectFromCommandLineAsync(recent.FilePath);
+            }
+        }
+
+        private async void RecentProject_DoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is ListBox listBox && listBox.SelectedItem is RecentProject recent)
+            {
+                await ViewModel.OpenProjectFromCommandLineAsync(recent.FilePath);
+            }
+        }
+
+        private void About_Click(object sender, RoutedEventArgs e)
+        {
+            AduMessageBox.Show(
+                ".NET Project Builder v1.0\n\n批量管理 Git 仓库和 .NET 项目\n支持并行构建和冲突处理",
+                "关于",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
     }
 }
