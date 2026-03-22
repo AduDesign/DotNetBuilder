@@ -1,0 +1,54 @@
+<UserControl
+	x:Class="DotNetBuilder.Views.ToolbarView"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
+	xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin">
+	<Border
+		Padding="10,0,10,10"
+		BorderBrush="#E0E0E0"
+		BorderThickness="0,0,0,1"
+		IsEnabled="{Binding IsEnabled}">
+		<Grid Visibility="{Binding ShowToolbar, Converter={StaticResource BoolToVisibilityConverter}}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="*" />
+				<ColumnDefinition Width="Auto" />
+			</Grid.ColumnDefinitions>
+
+			<!--  项目名称  -->
+			<AduSkin:AduEditableTextBlock
+				HorizontalAlignment="Left"
+				VerticalAlignment="Center"
+				FontSize="12"
+				Text="{Binding ProjectDisplayName}"
+				ToolTip="{Binding SelectedPath}" />
+
+			<!--  Git 操作  -->
+			<StackPanel
+				Grid.Column="1"
+				VerticalAlignment="Center"
+				Orientation="Horizontal">
+				<AduSkin:AduButton
+					Padding="8,4"
+					Command="{Binding OpenProjectCommand}"
+					Content="扫描Git目录"
+					ToolTip="打开已有项目" />
+				<AduSkin:AduButton
+					Margin="5,0,0,0"
+					Command="{Binding AddProjectCommand}"
+					Content="添加 Git 项目"
+					ToolTip="从根目录下扫描 Git 项目" />
+				<AduSkin:AduButton
+					Margin="5,0,0,0"
+					Command="{Binding RefreshStatusCommand}"
+					Content="刷新状态" />
+				<AduSkin:AduButton
+					Margin="5,0,0,0"
+					Padding="8,4"
+					Command="{Binding SaveProjectCommand}"
+					Content="保存项目"
+					ToolTip="保存当前项目" />
+			</StackPanel>
+		</Grid>
+	</Border>
+</UserControl>

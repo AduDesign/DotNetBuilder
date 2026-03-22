@@ -17,6 +17,10 @@ namespace DotNetBuilder.Services
 
         private readonly string _appConfigPath;
         private readonly JsonSerializerOptions _jsonOptions;
+        private ProjectInfo? _currentProject;
+
+        public event Action<ProjectInfo>? OnProjectLoaded;
+        public event Action? OnProjectClosed;
 
         public ProjectService()
         {
@@ -34,6 +38,33 @@ namespace DotNetBuilder.Services
                 WriteIndented = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
+        }
+
+        /// <summary>
+        /// 当前是否有打开的项目
+        /// </summary>
+        public bool HasProject => _currentProject != null;
+
+        /// <summary>
+        /// 当前项目
+        /// </summary>
+        public ProjectInfo? CurrentProject => _currentProject;
+
+        /// <summary>
+        /// 设置当前项目
+        /// </summary>
+        public void SetCurrentProject(ProjectInfo? project)
+        {
+            var hadProject = _currentProject != null;
+            _currentProject = project;
+            if (project != null)
+            {
+                OnProjectLoaded?.Invoke(project);
+            }
+            else if (hadProject)
+            {
+                OnProjectClosed?.Invoke();
+            }
         }
 
         /// <summary>

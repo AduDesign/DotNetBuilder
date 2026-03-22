@@ -23,7 +23,6 @@ namespace DotNetBuilder
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // 检查命令行参数（双击 .bdproj 文件打开）
             var args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && args[1].EndsWith(".bdproj", StringComparison.OrdinalIgnoreCase))
             {
@@ -34,14 +33,6 @@ namespace DotNetBuilder
         private async void RecentProject_Click(object sender, RoutedEventArgs e)
         {
             if (sender is System.Windows.Controls.MenuItem menuItem && menuItem.DataContext is RecentProject recent)
-            {
-                await ViewModel.OpenProjectFromCommandLineAsync(recent.FilePath);
-            }
-        }
-
-        private async void RecentProject_DoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (sender is ListBox listBox && listBox.SelectedItem is RecentProject recent)
             {
                 await ViewModel.OpenProjectFromCommandLineAsync(recent.FilePath);
             }

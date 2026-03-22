@@ -1,0 +1,71 @@
+<UserControl
+    x:Class="DotNetBuilder.Views.ConflictDialogView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin">
+
+    <Border
+        Background="#80000000"
+        Visibility="{Binding ShowDialog, Converter={StaticResource BoolToVisibilityConverter}}">
+        <Border
+            Width="400"
+            Padding="20"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Background="{DynamicResource WindowBackground}"
+            BorderBrush="{DynamicResource PrimaryBrush}"
+            BorderThickness="2"
+            CornerRadius="8">
+            <StackPanel>
+                <TextBlock
+                    FontSize="18"
+                    FontWeight="Bold"
+                    Foreground="{DynamicResource ErrorBrush}"
+                    Text="Git 冲突" />
+                <TextBlock
+                    Margin="0,10,0,5"
+                    FontSize="14"
+                    Text="{Binding ConflictProject.Name, StringFormat='项目: {0}'}" />
+                <TextBlock
+                    Margin="0,0,0,10"
+                    FontSize="14"
+                    Text="存在冲突文件，请选择处理方式：" />
+                <Border
+                    Margin="0,0,0,10"
+                    Padding="10"
+                    Background="#FFF5F5"
+                    BorderBrush="{DynamicResource ErrorBrush}"
+                    BorderThickness="1"
+                    CornerRadius="4">
+                    <TextBlock
+                        FontFamily="Consolas"
+                        FontSize="12"
+                        Foreground="{DynamicResource ErrorBrush}"
+                        Text="{Binding ConflictFileList}"
+                        TextWrapping="Wrap" />
+                </Border>
+                <StackPanel Orientation="Horizontal">
+                    <AduSkin:AduButton
+                        Width="Auto"
+                        Margin="0,0,10,0"
+                        Padding="15,8"
+                        Background="{DynamicResource PrimaryBrush}"
+                        Command="{Binding ResolveConflictOpenVSCommand}"
+                        Content="用 VS 打开" />
+                    <AduSkin:AduButton
+                        Width="Auto"
+                        Margin="0,0,10,0"
+                        Padding="15,8"
+                        Background="{DynamicResource WarnBrush}"
+                        Command="{Binding ResolveConflictAutoStashCommand}"
+                        Content="自动 Stash" />
+                    <AduSkin:AduButton
+                        Width="Auto"
+                        Padding="15,8"
+                        Command="{Binding ResolveConflictAbortCommand}"
+                        Content="放弃 Pull" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Border>
+</UserControl>
