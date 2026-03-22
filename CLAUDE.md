@@ -25,6 +25,7 @@ No test framework or linting tools are configured.
 - **ViewModels/** - `MainViewModel` (central logic, 1100+ lines), `RelayCommand`/`AsyncRelayCommand`, `ViewModelBase`
 - **Views/** - XAML views, `CommitMessageDialog`
 - **Services/** - `GitService`, `MSBuildService`, `ConfigService`
+- **Converters/** - `BoolToVisibilityConverter`, `HasChangesToBrushConverter`, etc.
 
 ## Key Services
 
@@ -32,8 +33,21 @@ No test framework or linting tools are configured.
 
 **MSBuildService** - 5-layer MSBuild detection: vswhere.exe, registry, common path scan (C:-G: drives), .NET Framework MSBuild, `dotnet msbuild`. Runs NuGet restore then MSBuild compile.
 
-**ConfigService** - Persists `config.json` (per-project MSBuild version, execute file, configuration, sort order, root path).
+**ConfigService** - Persists `config.json` alongside the executable (in `AppDomain.CurrentDomain.BaseDirectory`). Stores per-project: MSBuild version, execute file, configuration (Release/Debug), sort order, root path.
 
-## Log Classification
+## Key Models
 
-The app auto-classifies output into: `Error`, `Warning`, `Build` (MSBuild output), `Git` (git/nuget messages), `Message`. Filter via UI checkboxes.
+**GitProject** - Implements `INotifyPropertyChanged` manually. Key properties: `IsSelected`, `HasChanges`, `ChangesCount`, `IsExpanded`, `IsSyncing`, `IsBuilding`, `ErrorMessage`, `CommitMessage`, `SelectedMSBuildVersion`, `ExecuteFile`, `Configuration`.
+
+**MSBuildVersion** - Holds `DisplayName`, `Path`, `Version`, `VisualStudioVersion`.
+
+## UI Components
+
+- **AduSkin** - Third-party WPF UI library (loaded from `ThirdParty/AduSkin.dll`)
+- XAML converters handle status visualization (color coding: green=normal, orange=changes, red=error)
+- Log output is auto-classified into 5 types: `Error`, `Warning`, `Build` (MSBuild output), `Git` (git/nuget messages), `Message`
+
+## Dependencies
+
+- **AduSkin.dll** - Located in `ThirdParty/` folder (not a NuGet package)
+- No other NuGet dependencies beyond .NET 10

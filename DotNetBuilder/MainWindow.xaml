@@ -1,633 +1,731 @@
 <AduSkin:AduWindow
-    x:Class="DotNetBuilder.MainWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
-    xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
-    xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
-    Title=".NET Project Builder"
-    Width="600"
-    Height="900"
-    MinWidth="600"
-    MinHeight="600"
-    Icon="builder.ico"
-    WindowStartupLocation="CenterScreen">
-    <Grid Background="{DynamicResource PanelBackground}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition
-                Height="200"
-                MinHeight="200"
-                MaxHeight="600" />
-        </Grid.RowDefinitions>
+	x:Class="DotNetBuilder.MainWindow"
+	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+	xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
+	xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
+	xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
+	Title=".NET Project Builder"
+	Width="600"
+	Height="900"
+	MinWidth="600"
+	MinHeight="600"
+	Icon="builder.ico"
+	WindowStartupLocation="CenterScreen">
+	<Grid Background="{DynamicResource PanelBackground}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+			<RowDefinition Height="Auto" />
+			<RowDefinition
+				Height="200"
+				MinHeight="200"
+				MaxHeight="600" />
+		</Grid.RowDefinitions>
 
-        <!--  工具栏  -->
-        <Border
-            Padding="10"
-            BorderBrush="#E0E0E0"
-            BorderThickness="0,0,0,1"
-            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+		<!--  工具栏  -->
+		<Border
+			Padding="10"
+			BorderBrush="#E0E0E0"
+			BorderThickness="0,0,0,1"
+			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
 
-                <!--  目录选择  -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <AduSkin:AduButton
-                        Width="80"
-                        Margin="0,0,8,0"
-                        Command="{Binding SelectDirectoryCommand}"
-                        Content="选择目录" />
-                    <AduSkin:AduButton
-                        Width="80"
-                        Margin="0,0,15,0"
-                        Command="{Binding AddProjectCommand}"
-                        Content="添加项目" />
+				<!--  目录选择  -->
+				<StackPanel Grid.Column="0" Orientation="Horizontal">
+					<AduSkin:AduButton
+						Width="80"
+						Margin="0,0,8,0"
+						Command="{Binding SelectDirectoryCommand}"
+						Content="选择目录" />
+					<AduSkin:AduButton
+						Width="80"
+						Margin="0,0,15,0"
+						Command="{Binding AddProjectCommand}"
+						Content="添加项目" />
 
-                    <TextBlock
-                        Margin="0,0,10,0"
-                        VerticalAlignment="Center"
-                        Foreground="#666"
-                        Text="当前目录:" />
-                    <AduSkin:AduTextBox
-                        MaxWidth="300"
-                        VerticalAlignment="Center"
-                        BorderThickness="0"
-                        IsReadOnly="True"
-                        Text="{Binding SelectedPath}" />
+					<TextBlock
+						Margin="0,0,10,0"
+						VerticalAlignment="Center"
+						Foreground="#666"
+						Text="当前目录:" />
+					<AduSkin:AduTextBox
+						MaxWidth="300"
+						VerticalAlignment="Center"
+						BorderThickness="0"
+						IsReadOnly="True"
+						Text="{Binding SelectedPath}" />
 
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        Foreground="#888"
-                        Text="{Binding Projects.Count, StringFormat=' ({0} 个项目)'}"
-                        Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}}" />
-                </StackPanel>
+					<TextBlock
+						VerticalAlignment="Center"
+						Foreground="#888"
+						Text="{Binding Projects.Count, StringFormat=' ({0} 个项目)'}"
+						Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}}" />
+				</StackPanel>
 
-                <!--  全选/取消全选  -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <AduSkin:AduButton
-                        Margin="0,0,8,0"
-                        Command="{Binding RefreshStatusCommand}"
-                        Content="刷新状态" />
-                    <AduSkin:AduButton Command="{Binding SaveConfigCommand}" Content="保存" />
-                </StackPanel>
-            </Grid>
-        </Border>
+				<!--  全选/取消全选  -->
+				<StackPanel Grid.Column="2" Orientation="Horizontal">
+					<AduSkin:AduButton
+						Margin="0,0,8,0"
+						Command="{Binding RefreshStatusCommand}"
+						Content="刷新状态" />
+					<AduSkin:AduButton Command="{Binding SaveConfigCommand}" Content="保存" />
+				</StackPanel>
+			</Grid>
+		</Border>
 
-        <!--  主内容区域 - 项目列表  -->
-        <Border
-            Grid.Row="1"
-            Margin="10"
-            Padding="6"
-            BorderBrush="{DynamicResource NormalBorderBrush}"
-            BorderThickness="1"
-            CornerRadius="8"
-            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
+		<!--  主内容区域 - 项目列表  -->
+		<Border
+			Grid.Row="1"
+			Margin="10"
+			Padding="6"
+			BorderBrush="{DynamicResource NormalBorderBrush}"
+			BorderThickness="1"
+			CornerRadius="8"
+			IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}">
+			<Grid>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition Height="*" />
+				</Grid.RowDefinitions>
 
-                <!--  列表头部  -->
-                <Border
-                    Grid.Row="0"
-                    Margin="0,0,0,10"
-                    Padding="5,0,5,10"
-                    BorderBrush="#E0E0E0"
-                    BorderThickness="0,0,0,1">
-                    <Grid Margin="10,6,30,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="30" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="80" />
-                            <ColumnDefinition Width="110" />
-                        </Grid.ColumnDefinitions>
+				<!--  列表头部  -->
+				<Border
+					Grid.Row="0"
+					Margin="0,0,0,10"
+					Padding="5,0,5,10"
+					BorderBrush="#E0E0E0"
+					BorderThickness="0,0,0,1">
+					<Grid Margin="10,6,30,0">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="30" />
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="80" />
+							<ColumnDefinition Width="80" />
+							<ColumnDefinition Width="110" />
+						</Grid.ColumnDefinitions>
 
-                        <AduSkin:AduCheckBox IsChecked="{Binding IsSelectedAll}" IsThreeState="True" />
-                        <TextBlock
-                            Grid.Column="1"
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="项目名称" />
-                        <TextBlock
-                            Grid.Column="2"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="类型" />
-                        <TextBlock
-                            Grid.Column="3"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="状态" />
-                        <TextBlock
-                            Grid.Column="4"
-                            HorizontalAlignment="Center"
-                            VerticalAlignment="Center"
-                            FontWeight="SemiBold"
-                            Text="操作" />
-                    </Grid>
-                </Border>
+						<AduSkin:AduCheckBox IsChecked="{Binding IsSelectedAll}" IsThreeState="True" />
+						<TextBlock
+							Grid.Column="1"
+							VerticalAlignment="Center"
+							FontWeight="SemiBold"
+							Text="项目名称" />
+						<TextBlock
+							Grid.Column="2"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							FontWeight="SemiBold"
+							Text="类型" />
+						<TextBlock
+							Grid.Column="3"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							FontWeight="SemiBold"
+							Text="状态" />
+						<TextBlock
+							Grid.Column="4"
+							HorizontalAlignment="Center"
+							VerticalAlignment="Center"
+							FontWeight="SemiBold"
+							Text="操作" />
+					</Grid>
+				</Border>
 
-                <!--  项目列表  -->
-                <AduSkin:AduListBox
-                    Grid.Row="1"
-                    Padding="0,4"
-                    AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
-                    AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush05}"
-                    ItemsSource="{Binding Projects}"
-                    SelectedItem="{Binding SelectedItem}">
-                    <AduSkin:AduListBox.Resources>
-                        <Style BasedOn="{StaticResource AduPathIconButton}" TargetType="AduSkin:AduPathIconButton">
-                            <Setter Property="BorderThickness" Value="1" />
-                            <Setter Property="Margin" Value="0,0,5,0" />
-                            <Setter Property="Width" Value="24" />
-                            <Setter Property="Height" Value="24" />
-                            <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
-                            <Setter Property="AduAttach:PathBrushAttach.NormalPathBrush" Value="{DynamicResource Primarybrush}" />
-                            <Setter Property="AduAttach:PathDataAttach.Width" Value="8" />
-                            <Setter Property="AduAttach:PathDataAttach.Margin" Value="0" />
-                        </Style>
-                    </AduSkin:AduListBox.Resources>
-                    <AduSkin:AduListBox.ItemContainerStyle>
-                        <Style BasedOn="{StaticResource AduListBoxItem}" TargetType="AduSkin:AduListBoxItem">
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="Padding" Value="0" />
-                        </Style>
-                    </AduSkin:AduListBox.ItemContainerStyle>
-                    <AduSkin:AduListBox.ContextMenu>
-                        <AduSkin:AduContextMenu>
-                            <AduSkin:AduMenuItem
-                                Command="{Binding OpenFolderCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="打开目录" />
-                            <AduSkin:AduMenuItem
-                                Command="{Binding OpenVSCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="VisualStudio 打开" />
-                            <AduSkin:AduMenuItem
-                                Command="{Binding OpenVSCodeCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="VisualStudio Code 打开" />
-                            <AduSkin:AduMenuItem
-                                Command="{Binding BuildSingleCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="构建" />
-                            <AduSkin:AduMenuItem
-                                Command="{Binding SyncSingleCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="同步" />
-                            <AduSkin:AduMenuItem
-                                Command="{Binding RemoveProjectCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="删除" />
-                        </AduSkin:AduContextMenu>
-                    </AduSkin:AduListBox.ContextMenu>
-                    <AduSkin:AduListBox.ItemTemplate>
-                        <DataTemplate>
-                            <AduSkin:AduExpander
-                                x:Name="ItemBorder"
-                                Padding="8,4"
-                                Background="Transparent"
-                                BorderThickness="2"
-                                IsExpanded="{Binding IsExpanded}">
-                                <AduSkin:AduExpander.Header>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="30" />
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="120" />
-                                        </Grid.ColumnDefinitions>
+				<!--  项目列表  -->
+				<AduSkin:AduListBox
+					Grid.Row="1"
+					Padding="0,4"
+					AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
+					AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush05}"
+					ItemsSource="{Binding Projects}"
+					SelectedItem="{Binding SelectedItem}">
+					<AduSkin:AduListBox.Resources>
+						<Style BasedOn="{StaticResource AduPathIconButton}" TargetType="AduSkin:AduPathIconButton">
+							<Setter Property="BorderThickness" Value="1" />
+							<Setter Property="Margin" Value="0,0,5,0" />
+							<Setter Property="Width" Value="24" />
+							<Setter Property="Height" Value="24" />
+							<Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
+							<Setter Property="AduAttach:PathBrushAttach.NormalPathBrush" Value="{DynamicResource Primarybrush}" />
+							<Setter Property="AduAttach:PathDataAttach.Width" Value="8" />
+							<Setter Property="AduAttach:PathDataAttach.Margin" Value="0" />
+						</Style>
+					</AduSkin:AduListBox.Resources>
+					<AduSkin:AduListBox.ItemContainerStyle>
+						<Style BasedOn="{StaticResource AduListBoxItem}" TargetType="AduSkin:AduListBoxItem">
+							<Setter Property="HorizontalContentAlignment" Value="Stretch" />
+							<Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
+							<Setter Property="BorderThickness" Value="0" />
+							<Setter Property="Padding" Value="0" />
+						</Style>
+					</AduSkin:AduListBox.ItemContainerStyle>
+					<AduSkin:AduListBox.ContextMenu>
+						<AduSkin:AduContextMenu>
+							<AduSkin:AduMenuItem
+								Command="{Binding OpenFolderCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="打开目录" />
+							<AduSkin:AduMenuItem
+								Command="{Binding OpenVSCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="VisualStudio 打开" />
+							<AduSkin:AduMenuItem
+								Command="{Binding OpenVSCodeCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="VisualStudio Code 打开" />
+							<AduSkin:AduMenuItem
+								Command="{Binding BuildSingleCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="构建" />
+							<AduSkin:AduMenuItem
+								Command="{Binding SyncSingleCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="同步" />
+							<AduSkin:AduMenuItem
+								Command="{Binding RemoveProjectCommand}"
+								CommandParameter="{Binding SelectedItem}"
+								Header="删除" />
+						</AduSkin:AduContextMenu>
+					</AduSkin:AduListBox.ContextMenu>
+					<AduSkin:AduListBox.ItemTemplate>
+						<DataTemplate>
+							<AduSkin:AduExpander
+								x:Name="ItemBorder"
+								Padding="8,4"
+								Background="Transparent"
+								BorderThickness="2"
+								IsExpanded="{Binding IsExpanded}">
+								<AduSkin:AduExpander.Header>
+									<Grid>
+										<Grid.ColumnDefinitions>
+											<ColumnDefinition Width="30" />
+											<ColumnDefinition Width="*" />
+											<ColumnDefinition Width="80" />
+											<ColumnDefinition Width="80" />
+											<ColumnDefinition Width="120" />
+										</Grid.ColumnDefinitions>
 
-                                        <!--  勾选框  -->
-                                        <AduSkin:AduCheckBox
-                                            Grid.Column="0"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+										<!--  勾选框  -->
+										<AduSkin:AduCheckBox
+											Grid.Column="0"
+											HorizontalAlignment="Center"
+											VerticalAlignment="Center"
+											IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                                        <!--  项目信息  -->
-                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                            <TextBlock
-                                                FontSize="14"
-                                                FontWeight="Medium"
-                                                Text="{Binding Name}" />
-                                            <TextBlock
-                                                FontSize="11"
-                                                Foreground="#999"
-                                                Text="{Binding Path}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTip="{Binding Path}" />
-                                        </StackPanel>
+										<!--  项目信息  -->
+										<StackPanel Grid.Column="1" VerticalAlignment="Center">
+											<TextBlock
+												FontSize="14"
+												FontWeight="Medium"
+												Text="{Binding Name}" />
+											<TextBlock
+												FontSize="11"
+												Foreground="#999"
+												Text="{Binding Path}"
+												TextTrimming="CharacterEllipsis"
+												ToolTip="{Binding Path}" />
+										</StackPanel>
 
-                                        <!--  类型标签  -->
-                                        <Border
-                                            Grid.Column="2"
-                                            Padding="4,1"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            Background="{Binding IsDotNetProject, Converter={StaticResource HasChangesToBrushConverter}}"
-                                            CornerRadius="4">
-                                            <TextBlock
-                                                FontSize="10"
-                                                Foreground="White"
-                                                Text="{Binding IsDotNetProject, Converter={StaticResource ProjectTypeConverter}}" />
-                                        </Border>
+										<!--  类型标签  -->
+										<Border
+											Grid.Column="2"
+											Padding="4,1"
+											HorizontalAlignment="Center"
+											VerticalAlignment="Center"
+											Background="{Binding IsDotNetProject, Converter={StaticResource HasChangesToBrushConverter}}"
+											CornerRadius="4">
+											<TextBlock
+												FontSize="10"
+												Foreground="White"
+												Text="{Binding IsDotNetProject, Converter={StaticResource ProjectTypeConverter}}" />
+										</Border>
 
-                                        <!--  状态  -->
-                                        <StackPanel
-                                            Grid.Column="3"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center">
-                                            <!--  同步中/构建中状态  -->
-                                            <TextBlock
-                                                x:Name="txtSyncingStatus"
-                                                HorizontalAlignment="Center"
-                                                FontSize="12"
-                                                Foreground="{DynamicResource PrimaryBrush}"
-                                                Text="同步中..."
-                                                Visibility="Collapsed" />
-                                            <TextBlock
-                                                x:Name="txtBuildingStatus"
-                                                HorizontalAlignment="Center"
-                                                FontSize="12"
-                                                Foreground="{DynamicResource PrimaryBrush}"
-                                                Text="构建中..."
-                                                Visibility="Collapsed" />
-                                            <!--  正常状态显示更改数  -->
-                                            <TextBlock
-                                                x:Name="txtChangesCount"
-                                                HorizontalAlignment="Center"
-                                                FontSize="12"
-                                                FontWeight="Bold"
-                                                Foreground="{Binding HasChanges, Converter={StaticResource HasChangesToBrushConverter}}"
-                                                Text="{Binding ChangesCount, Converter={StaticResource ChangesCountConverter}}" />
-                                        </StackPanel>
+										<!--  状态  -->
+										<StackPanel
+											Grid.Column="3"
+											HorizontalAlignment="Center"
+											VerticalAlignment="Center">
+											<!--  同步中/构建中状态  -->
+											<TextBlock
+												x:Name="txtSyncingStatus"
+												HorizontalAlignment="Center"
+												FontSize="12"
+												Foreground="{DynamicResource PrimaryBrush}"
+												Text="同步中..."
+												Visibility="Collapsed" />
+											<TextBlock
+												x:Name="txtBuildingStatus"
+												HorizontalAlignment="Center"
+												FontSize="12"
+												Foreground="{DynamicResource PrimaryBrush}"
+												Text="构建中..."
+												Visibility="Collapsed" />
+											<!--  正常状态显示更改数  -->
+											<TextBlock
+												x:Name="txtChangesCount"
+												HorizontalAlignment="Center"
+												FontSize="12"
+												FontWeight="Bold"
+												Foreground="{Binding HasChanges, Converter={StaticResource HasChangesToBrushConverter}}"
+												Text="{Binding ChangesCount, Converter={StaticResource ChangesCountConverter}}" />
+										</StackPanel>
 
-                                        <!--  操作按钮  -->
-                                        <StackPanel
-                                            Grid.Column="4"
-                                            HorizontalAlignment="Left"
-                                            VerticalAlignment="Center"
-                                            Orientation="Horizontal">
-                                            <AduSkin:AduPathIconButton
-                                                Margin="0,0,5,0"
-                                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Up}"
-                                                BorderThickness="1"
-                                                Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                FontSize="12"
-                                                ToolTip="上移" />
-                                            <AduSkin:AduPathIconButton
-                                                Margin="0,0,5,0"
-                                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Down}"
-                                                BorderThickness="1"
-                                                Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                CommandParameter="{Binding}"
-                                                FontSize="12"
-                                                ToolTip="下移" />
-                                            <!--  单独同步按钮  -->
-                                            <Grid>
-                                                <AduSkin:AduPathIconButton
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
-                                                    AduAttach:PathDataAttach.Margin="0"
-                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
-                                                    AduAttach:PathDataAttach.Width="12"
-                                                    Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}"
-                                                    ToolTip="单独同步此项目"
-                                                    Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToReVisibility}}" />
-                                                <AduSkin:AduLoading
-                                                    Width="24"
-                                                    Height="24"
-                                                    MinWidth="24"
-                                                    MinHeight="24"
-                                                    Margin="0,0,5,0"
-                                                    HorizontalAlignment="Center"
-                                                    AduAttach:PathDataAttach.Width="10"
-                                                    IsActived="{Binding IsSyncing}"
-                                                    Type="Apple" />
-                                            </Grid>
-                                            <!--  单独构建按钮  -->
-                                            <Grid Margin="0,0,5,0" Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <AduSkin:AduPathIconButton
-                                                    Margin="0"
-                                                    AduAttach:PathBrushAttach.NormalPathBrush="Green"
-                                                    AduAttach:PathDataAttach.Margin="0"
-                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
-                                                    AduAttach:PathDataAttach.Width="9"
-                                                    Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                    CommandParameter="{Binding}"
-                                                    ToolTip="单独构建此项目"
-                                                    Visibility="{Binding IsBuilding, Converter={StaticResource BooleanToReVisibility}}" />
-                                                <AduSkin:AduLoading
-                                                    Width="24"
-                                                    Height="24"
-                                                    MinWidth="24"
-                                                    MinHeight="24"
-                                                    HorizontalAlignment="Center"
-                                                    AduAttach:PathDataAttach.Width="10"
-                                                    IsActived="{Binding IsBuilding}"
-                                                    Type="Apple" />
-                                            </Grid>
-                                        </StackPanel>
-                                    </Grid>
-                                </AduSkin:AduExpander.Header>
-                                <AduSkin:AduExpander.Content>
-                                    <StackPanel Margin="0,4,0,0">
-                                        <!--  错误信息显示  -->
-                                        <Border
-                                            x:Name="ErrorPanel"
-                                            Margin="0,0,0,10"
-                                            Padding="10"
-                                            Background="#FFF0F0"
-                                            BorderBrush="#50FF4444"
-                                            BorderThickness="1"
-                                            CornerRadius="6"
-                                            Visibility="Collapsed">
-                                            <StackPanel>
-                                                <TextBlock
-                                                    FontWeight="Bold"
-                                                    Foreground="#CC0000"
-                                                    Text="错误信息:" />
-                                                <AduSkin:AduTextBox
-                                                    Height="Auto"
-                                                    MaxHeight="200"
-                                                    Margin="0,5,0,0"
-                                                    BorderBrush="{DynamicResource ErrorBrush}"
-                                                    FontSize="10"
-                                                    Foreground="{DynamicResource ErrorBrush}"
-                                                    IsReadOnly="True"
-                                                    Text="{Binding ErrorMessage}"
-                                                    TextWrapping="Wrap"
-                                                    VerticalScrollBarVisibility="Auto" />
-                                            </StackPanel>
-                                        </Border>
+										<!--  操作按钮  -->
+										<StackPanel
+											Grid.Column="4"
+											HorizontalAlignment="Left"
+											VerticalAlignment="Center"
+											Orientation="Horizontal">
+											<AduSkin:AduPathIconButton
+												Margin="0,0,5,0"
+												AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Up}"
+												BorderThickness="1"
+												Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+												CommandParameter="{Binding}"
+												FontSize="12"
+												ToolTip="上移" />
+											<AduSkin:AduPathIconButton
+												Margin="0,0,5,0"
+												AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Down}"
+												BorderThickness="1"
+												Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+												CommandParameter="{Binding}"
+												FontSize="12"
+												ToolTip="下移" />
+											<!--  单独同步按钮  -->
+											<Grid>
+												<AduSkin:AduPathIconButton
+													AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
+													AduAttach:PathDataAttach.Margin="0"
+													AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
+													AduAttach:PathDataAttach.Width="12"
+													Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+													CommandParameter="{Binding}"
+													ToolTip="单独同步此项目"
+													Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToReVisibility}}" />
+												<AduSkin:AduLoading
+													Width="24"
+													Height="24"
+													MinWidth="24"
+													MinHeight="24"
+													Margin="0,0,5,0"
+													HorizontalAlignment="Center"
+													AduAttach:PathDataAttach.Width="10"
+													IsActived="{Binding IsSyncing}"
+													Type="Apple" />
+											</Grid>
+											<!--  单独构建按钮  -->
+											<Grid Margin="0,0,5,0" Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+												<AduSkin:AduPathIconButton
+													Margin="0"
+													AduAttach:PathBrushAttach.NormalPathBrush="Green"
+													AduAttach:PathDataAttach.Margin="0"
+													AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
+													AduAttach:PathDataAttach.Width="9"
+													Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+													CommandParameter="{Binding}"
+													ToolTip="单独构建此项目"
+													Visibility="{Binding IsBuilding, Converter={StaticResource BooleanToReVisibility}}" />
+												<AduSkin:AduLoading
+													Width="24"
+													Height="24"
+													MinWidth="24"
+													MinHeight="24"
+													HorizontalAlignment="Center"
+													AduAttach:PathDataAttach.Width="10"
+													IsActived="{Binding IsBuilding}"
+													Type="Apple" />
+											</Grid>
+										</StackPanel>
+									</Grid>
+								</AduSkin:AduExpander.Header>
+								<AduSkin:AduExpander.Content>
+									<StackPanel Margin="0,4,0,0">
+										<!--  错误信息显示  -->
+										<Border
+											x:Name="ErrorPanel"
+											Margin="0,0,0,10"
+											Padding="10"
+											Background="#FFF0F0"
+											BorderBrush="#50FF4444"
+											BorderThickness="1"
+											CornerRadius="6"
+											Visibility="Collapsed">
+											<StackPanel>
+												<TextBlock
+													FontWeight="Bold"
+													Foreground="#CC0000"
+													Text="错误信息:" />
+												<AduSkin:AduTextBox
+													Height="Auto"
+													MinHeight="100"
+													MaxHeight="200"
+													Margin="0,5,0,0"
+													BorderBrush="{DynamicResource ErrorBrush}"
+													FontSize="10"
+													Foreground="{DynamicResource ErrorBrush}"
+													IsReadOnly="True"
+													Text="{Binding ErrorMessage}"
+													TextWrapping="Wrap"
+													VerticalScrollBarVisibility="Auto" />
+											</StackPanel>
+										</Border>
 
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition />
-                                                <ColumnDefinition Width="130" />
-                                                <ColumnDefinition />
-                                            </Grid.ColumnDefinitions>
-                                            <!--  MSBuild版本选择  -->
-                                            <AduSkin:AduFormBox
-                                                Margin="0,0,10,0"
-                                                Header="MSBuild:"
-                                                Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
-                                                    <AduSkin:AduComboBox.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock Text="{Binding DisplayName}" />
-                                                        </DataTemplate>
-                                                    </AduSkin:AduComboBox.ItemTemplate>
-                                                </AduSkin:AduComboBox>
-                                            </AduSkin:AduFormBox>
-                                            <!--  构建类型选择  -->
-                                            <AduSkin:AduFormBox
-                                                Grid.Column="1"
-                                                Margin="0,0,10,0"
-                                                Header="Config:"
-                                                Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                <AduSkin:AduComboBox ItemsSource="{Binding DataContext.ConfigurationTypes, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding Configuration}" />
-                                            </AduSkin:AduFormBox>
-                                            <!--  执行文件路径  -->
-                                            <AduSkin:AduFormBox Grid.Column="2" Header="ExecuteFile:">
-                                                <AduSkin:AduChooseBox Text="{Binding ExecuteFile}" />
-                                            </AduSkin:AduFormBox>
-                                        </Grid>
-                                        <Grid Margin="0,4,0,0">
-                                            <TextBlock
-                                                x:Name="txtNotChange"
-                                                Margin="0,10"
-                                                HorizontalAlignment="Center"
-                                                VerticalAlignment="Center"
-                                                Foreground="#777"
-                                                Text="暂无更改"
-                                                Visibility="Collapsed" />
-                                            <!--  提交信息  -->
-                                            <AduSkin:AduFormBox
-                                                x:Name="ChangePanel"
-                                                Margin="0,0,0,0"
-                                                AduAttach:HeaderAttach.VerticalAlignment="Top"
-                                                Header="Commit: "
-                                                Visibility="Collapsed">
-                                                <AduSkin:AduTextBox
-                                                    Grid.Column="1"
-                                                    Height="50"
-                                                    Padding="4"
-                                                    VerticalContentAlignment="Top"
-                                                    Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"
-                                                    ToolTip="输入该项目的提交信息" />
-                                            </AduSkin:AduFormBox>
-                                        </Grid>
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition />
+												<ColumnDefinition Width="130" />
+												<ColumnDefinition />
+											</Grid.ColumnDefinitions>
+											<!--  MSBuild版本选择  -->
+											<AduSkin:AduFormBox
+												Margin="0,0,10,0"
+												Header="MSBuild:"
+												Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+												<AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding SelectedMSBuildVersion}">
+													<AduSkin:AduComboBox.ItemTemplate>
+														<DataTemplate>
+															<TextBlock Text="{Binding DisplayName}" />
+														</DataTemplate>
+													</AduSkin:AduComboBox.ItemTemplate>
+												</AduSkin:AduComboBox>
+											</AduSkin:AduFormBox>
+											<!--  构建类型选择  -->
+											<AduSkin:AduFormBox
+												Grid.Column="1"
+												Margin="0,0,10,0"
+												Header="Config:"
+												Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+												<AduSkin:AduComboBox ItemsSource="{Binding DataContext.ConfigurationTypes, RelativeSource={RelativeSource AncestorType=Window}}" SelectedItem="{Binding Configuration}" />
+											</AduSkin:AduFormBox>
+											<!--  执行文件路径  -->
+											<AduSkin:AduFormBox Grid.Column="2" Header="ExecuteFile:">
+												<AduSkin:AduChooseBox Text="{Binding ExecuteFile}" />
+											</AduSkin:AduFormBox>
+										</Grid>
+										<Grid Margin="0,4,0,0">
+											<TextBlock
+												x:Name="txtNotChange"
+												Margin="0,10"
+												HorizontalAlignment="Center"
+												VerticalAlignment="Center"
+												Foreground="#777"
+												Text="暂无更改"
+												Visibility="Collapsed" />
+											<!--  提交信息  -->
+											<AduSkin:AduFormBox
+												x:Name="ChangePanel"
+												Margin="0,0,0,0"
+												AduAttach:HeaderAttach.VerticalAlignment="Top"
+												Header="Commit: "
+												Visibility="Collapsed">
+												<AduSkin:AduTextBox
+													Grid.Column="1"
+													Height="50"
+													Padding="4"
+													VerticalContentAlignment="Top"
+													Text="{Binding CommitMessage, UpdateSourceTrigger=PropertyChanged}"
+													ToolTip="输入该项目的提交信息" />
+											</AduSkin:AduFormBox>
+										</Grid>
 
-                                    </StackPanel>
-                                </AduSkin:AduExpander.Content>
-                            </AduSkin:AduExpander>
-                            <DataTemplate.Triggers>
-                                <!--  有错误时红色边框并显示错误信息  -->
-                                <DataTrigger Binding="{Binding HasError}" Value="True">
-                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
-                                    <Setter TargetName="ErrorPanel" Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                                <!--  有更改时橙色边框  -->
-                                <DataTrigger Binding="{Binding HasChanges}" Value="True">
-                                    <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource WarnBrush}" />
-                                    <Setter TargetName="ChangePanel" Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding HasChanges}" Value="False">
-                                    <Setter TargetName="txtNotChange" Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                                <!--  同步中状态  -->
-                                <DataTrigger Binding="{Binding IsSyncing}" Value="True">
-                                    <Setter TargetName="txtSyncingStatus" Property="Visibility" Value="Visible" />
-                                    <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                                <!--  构建中状态  -->
-                                <DataTrigger Binding="{Binding IsBuilding}" Value="True">
-                                    <Setter TargetName="txtBuildingStatus" Property="Visibility" Value="Visible" />
-                                    <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </DataTemplate.Triggers>
-                        </DataTemplate>
-                    </AduSkin:AduListBox.ItemTemplate>
-                </AduSkin:AduListBox>
+									</StackPanel>
+								</AduSkin:AduExpander.Content>
+							</AduSkin:AduExpander>
+							<DataTemplate.Triggers>
+								<!--  有错误时红色边框并显示错误信息  -->
+								<DataTrigger Binding="{Binding HasError}" Value="True">
+									<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+									<Setter TargetName="ErrorPanel" Property="Visibility" Value="Visible" />
+								</DataTrigger>
+								<!--  有更改时橙色边框  -->
+								<DataTrigger Binding="{Binding HasChanges}" Value="True">
+									<Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource WarnBrush}" />
+									<Setter TargetName="ChangePanel" Property="Visibility" Value="Visible" />
+								</DataTrigger>
+								<DataTrigger Binding="{Binding HasChanges}" Value="False">
+									<Setter TargetName="txtNotChange" Property="Visibility" Value="Visible" />
+								</DataTrigger>
+								<!--  同步中状态  -->
+								<DataTrigger Binding="{Binding IsSyncing}" Value="True">
+									<Setter TargetName="txtSyncingStatus" Property="Visibility" Value="Visible" />
+									<Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
+								</DataTrigger>
+								<!--  构建中状态  -->
+								<DataTrigger Binding="{Binding IsBuilding}" Value="True">
+									<Setter TargetName="txtBuildingStatus" Property="Visibility" Value="Visible" />
+									<Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
+								</DataTrigger>
+							</DataTemplate.Triggers>
+						</DataTemplate>
+					</AduSkin:AduListBox.ItemTemplate>
+				</AduSkin:AduListBox>
 
-                <!--  空状态提示  -->
-                <StackPanel
-                    Grid.Row="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
-                    <TextBlock
-                        HorizontalAlignment="Center"
-                        FontFamily="Segoe MDL2 Assets"
-                        FontSize="48"
-                        Foreground="#CCC"
-                        Text="&#xE8B7;" />
-                    <TextBlock
-                        Margin="0,10,0,0"
-                        FontSize="16"
-                        Foreground="#999"
-                        Text="请选择包含Git项目的目录" />
-                </StackPanel>
-            </Grid>
-        </Border>
+				<!--  空状态提示  -->
+				<StackPanel
+					Grid.Row="1"
+					HorizontalAlignment="Center"
+					VerticalAlignment="Center"
+					Visibility="{Binding Projects.Count, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}">
+					<TextBlock
+						HorizontalAlignment="Center"
+						FontFamily="Segoe MDL2 Assets"
+						FontSize="48"
+						Foreground="#CCC"
+						Text="&#xE8B7;" />
+					<TextBlock
+						Margin="0,10,0,0"
+						FontSize="16"
+						Foreground="#999"
+						Text="请选择包含Git项目的目录" />
+				</StackPanel>
+			</Grid>
+		</Border>
 
-        <AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
-        <!--  底部区域  -->
-        <Grid Grid.Row="3" Margin="10">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+		<AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
+		<!--  底部区域  -->
+		<Grid Grid.Row="3" Margin="10">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="*" />
+			</Grid.RowDefinitions>
 
-            <!--  右侧操作按钮  -->
-            <StackPanel
-                Margin="0,0,0,10"
-                IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
-                Orientation="Horizontal">
-                <AduSkin:AduFormBox Header="运行项目">
-                    <AduSkin:AduComboBox
-                        Width="120"
-                        DisplayMemberPath="Path"
-                        ItemsSource="{Binding Projects}"
-                        SelectedItem="{Binding SelectedProject}" />
-                </AduSkin:AduFormBox>
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="10,0,0,0"
-                    Padding="10,0"
-                    Command="{Binding RunSelectedCommand}"
-                    Content="运行程序" />
-                <!--  主操作按钮  -->
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="10,0,0,0"
-                    Padding="10,0"
-                    Command="{Binding SyncSelectedCommand}"
-                    Content="一键Git同步" />
+			<!--  右侧操作按钮  -->
+			<StackPanel
+				Margin="0,0,0,10"
+				IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+				Orientation="Horizontal">
+				<AduSkin:AduFormBox Header="运行项目">
+					<AduSkin:AduComboBox
+						Width="120"
+						DisplayMemberPath="Path"
+						ItemsSource="{Binding Projects}"
+						SelectedItem="{Binding SelectedProject}" />
+				</AduSkin:AduFormBox>
+				<AduSkin:AduButton
+					Width="Auto"
+					Margin="10,0,0,0"
+					Padding="10,0"
+					Command="{Binding RunSelectedCommand}"
+					Content="运行程序" />
+				<!--  主操作按钮  -->
+				<AduSkin:AduButton
+					Width="Auto"
+					Margin="10,0,0,0"
+					Padding="10,0"
+					Command="{Binding SyncSelectedCommand}"
+					Content="一键Git同步" />
 
-                <AduSkin:AduButton
-                    Width="Auto"
-                    Margin="10,0,0,0"
-                    Padding="10,0"
-                    Command="{Binding BuildSelectedCommand}"
-                    Content="一键构建" />
-            </StackPanel>
+				<AduSkin:AduButton
+					Width="Auto"
+					Margin="10,0,0,0"
+					Padding="10,0"
+					Command="{Binding BuildSelectedCommand}"
+					Content="一键构建" />
+			</StackPanel>
 
-            <!--  日志过滤选项  -->
-            <StackPanel
-                Grid.Row="1"
-                Margin="0,0,0,10"
-                IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
-                Orientation="Horizontal">
-                <TextBlock
-                    VerticalAlignment="Center"
-                    Foreground="#666"
-                    Text="日志过滤:" />
-                <AduSkin:AduCheckBox
-                    Margin="10,0,0,0"
-                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
-                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource ErrorBrush}"
-                    Content="错误"
-                    Foreground="{DynamicResource ErrorBrush}"
-                    IsChecked="{Binding ShowErrorLog}" />
-                <AduSkin:AduCheckBox
-                    Margin="10,0,0,0"
-                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
-                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource WarnBrush}"
-                    Content="警告"
-                    Foreground="{DynamicResource WarnBrush}"
-                    IsChecked="{Binding ShowWarningLog}" />
-                <AduSkin:AduCheckBox
-                    Margin="10,0,0,0"
-                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource InfoBrush}"
-                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource InfoBrush}"
-                    Content="消息"
-                    Foreground="{DynamicResource InfoBrush}"
-                    IsChecked="{Binding ShowMessageLog}" />
-                <AduSkin:AduCheckBox
-                    Margin="10,0,0,0"
-                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource SuccessBrush}"
-                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource SuccessBrush}"
-                    Content="Git"
-                    Foreground="{DynamicResource SuccessBrush}"
-                    IsChecked="{Binding ShowGitLog}" />
-                <AduSkin:AduCheckBox
-                    Margin="10,0,0,0"
-                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource StringPinBrush}"
-                    AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource StringPinBrush}"
-                    Content="Build"
-                    Foreground="{DynamicResource StringPinBrush}"
-                    IsChecked="{Binding ShowBuildLog}"
-                    ToolTip="MSBuild编译详细输出（文件路径等），默认不显示" />
-            </StackPanel>
+			<!--  日志过滤选项  -->
+			<StackPanel
+				Grid.Row="1"
+				Margin="0,0,0,10"
+				IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}"
+				Orientation="Horizontal">
+				<TextBlock
+					VerticalAlignment="Center"
+					Foreground="#666"
+					Text="日志过滤:" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
+					AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource ErrorBrush}"
+					Content="错误"
+					Foreground="{DynamicResource ErrorBrush}"
+					IsChecked="{Binding ShowErrorLog}" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
+					AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource WarnBrush}"
+					Content="警告"
+					Foreground="{DynamicResource WarnBrush}"
+					IsChecked="{Binding ShowWarningLog}" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource InfoBrush}"
+					AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource InfoBrush}"
+					Content="消息"
+					Foreground="{DynamicResource InfoBrush}"
+					IsChecked="{Binding ShowMessageLog}" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource SuccessBrush}"
+					AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource SuccessBrush}"
+					Content="Git"
+					Foreground="{DynamicResource SuccessBrush}"
+					IsChecked="{Binding ShowGitLog}" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource StringPinBrush}"
+					AduAttach:PathBrushAttach.SelectedPathBrush="{DynamicResource StringPinBrush}"
+					Content="Build"
+					Foreground="{DynamicResource StringPinBrush}"
+					IsChecked="{Binding ShowBuildLog}"
+					ToolTip="MSBuild编译详细输出（文件路径等），默认不显示" />
 
-            <!--  日志输出  -->
-            <AduSkin:AduGroupBox Grid.Row="2" VerticalContentAlignment="Stretch">
-                <AduSkin:AduGroupBox.Header>
-                    <Grid>
-                        <TextBlock VerticalAlignment="Center" Text="输出日志" />
-                        <AduSkin:AduButton
-                            Width="40"
-                            Height="Auto"
-                            HorizontalAlignment="Right"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            Command="{Binding ClearLogCommand}"
-                            Content="清空"
-                            FontSize="11"
-                            Foreground="{DynamicResource PrimaryBrush}"
-                            IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}" />
-                    </Grid>
-                </AduSkin:AduGroupBox.Header>
+				<Separator
+					Width="1"
+					Height="20"
+					Margin="15,0"
+					Background="#DDD" />
 
-                <AduSkin:AduTextBox
-                    Height="Auto"
-                    VerticalAlignment="Stretch"
-                    VerticalContentAlignment="Top"
-                    AduAttach:BorderAttach.CornerRadius="0,0,6,6"
-                    BorderThickness="0"
-                    FontSize="10"
-                    IsAutoScrollToBottom="True"
-                    IsReadOnly="True"
-                    MultipleLine="True"
-                    Text="{Binding LogOutput}"
-                    TextWrapping="Wrap"
-                    VerticalScrollBarVisibility="Auto" />
-            </AduSkin:AduGroupBox>
+				<TextBlock
+					VerticalAlignment="Center"
+					Foreground="#666"
+					Text="Git同步:" />
+				<AduSkin:AduComboBox
+					Width="90"
+					Margin="10,0,0,0"
+					DisplayMemberPath=""
+					ItemsSource="{Binding PullStrategies}"
+					SelectedItem="{Binding GlobalPullStrategy}"
+					ToolTip="Pull 策略" />
+				<AduSkin:AduComboBox
+					Width="90"
+					Margin="5,0,0,0"
+					DisplayMemberPath=""
+					ItemsSource="{Binding ConflictActions}"
+					SelectedItem="{Binding GlobalConflictAction}"
+					ToolTip="冲突时处理方式" />
+				<AduSkin:AduCheckBox
+					Margin="10,0,0,0"
+					Content="无信息时自动提交"
+					IsChecked="{Binding GlobalAutoCommitWhenNoMessage}"
+					ToolTip="未填写提交信息时，使用默认信息提交" />
+			</StackPanel>
 
-        </Grid>
+			<!--  日志输出  -->
+			<AduSkin:AduGroupBox Grid.Row="2" VerticalContentAlignment="Stretch">
+				<AduSkin:AduGroupBox.Header>
+					<Grid>
+						<TextBlock VerticalAlignment="Center" Text="输出日志" />
+						<AduSkin:AduButton
+							Width="40"
+							Height="Auto"
+							HorizontalAlignment="Right"
+							Background="Transparent"
+							BorderThickness="0"
+							Command="{Binding ClearLogCommand}"
+							Content="清空"
+							FontSize="11"
+							Foreground="{DynamicResource PrimaryBrush}"
+							IsEnabled="{Binding IsBusy, Converter={StaticResource BooleanReverseConverter}}" />
+					</Grid>
+				</AduSkin:AduGroupBox.Header>
 
-        <!--  加载中遮罩  -->
-        <Border Grid.RowSpan="2" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <AduSkin:AduLoading
-                    Width="100"
-                    Height="100"
-                    IsActived="{Binding IsBusy}" />
-                <TextBlock
-                    Margin="0,15,0,0"
-                    HorizontalAlignment="Center"
-                    FontSize="14"
-                    Foreground="{DynamicResource PrimaryBrush}"
-                    Text="处理中..." />
-            </StackPanel>
-        </Border>
-    </Grid>
+				<AduSkin:AduTextBox
+					Height="Auto"
+					VerticalAlignment="Stretch"
+					VerticalContentAlignment="Top"
+					AduAttach:BorderAttach.CornerRadius="0,0,6,6"
+					BorderThickness="0"
+					FontSize="10"
+					IsAutoScrollToBottom="True"
+					IsReadOnly="True"
+					MultipleLine="True"
+					Text="{Binding LogOutput}"
+					TextWrapping="Wrap"
+					VerticalScrollBarVisibility="Auto" />
+			</AduSkin:AduGroupBox>
+
+		</Grid>
+
+		<!--  加载中遮罩  -->
+		<Border Grid.RowSpan="2" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+				<AduSkin:AduLoading
+					Width="100"
+					Height="100"
+					IsActived="{Binding IsBusy}" />
+				<TextBlock
+					Margin="0,15,0,0"
+					HorizontalAlignment="Center"
+					FontSize="14"
+					Foreground="{DynamicResource PrimaryBrush}"
+					Text="处理中..." />
+			</StackPanel>
+		</Border>
+
+		<!--  冲突处理对话框  -->
+		<Border
+			Grid.RowSpan="4"
+			Background="#80000000"
+			Visibility="{Binding ShowConflictDialog, Converter={StaticResource BoolToVisibilityConverter}}">
+			<Border
+				Width="400"
+				Padding="20"
+				HorizontalAlignment="Center"
+				VerticalAlignment="Center"
+				Background="{DynamicResource WindowBackground}"
+				BorderBrush="{DynamicResource PrimaryBrush}"
+				BorderThickness="2"
+				CornerRadius="8">
+				<StackPanel>
+					<TextBlock
+						FontSize="18"
+						FontWeight="Bold"
+						Foreground="{DynamicResource ErrorBrush}"
+						Text="Git 冲突" />
+					<TextBlock
+						Margin="0,10,0,5"
+						FontSize="14"
+						Text="{Binding ConflictProject.Name, StringFormat='项目: {0}'}" />
+					<TextBlock
+						Margin="0,0,0,10"
+						FontSize="14"
+						Text="存在冲突文件，请选择处理方式：" />
+					<Border
+						Margin="0,0,0,10"
+						Padding="10"
+						Background="#FFF5F5"
+						BorderBrush="{DynamicResource ErrorBrush}"
+						BorderThickness="1"
+						CornerRadius="4">
+						<TextBlock
+							FontFamily="Consolas"
+							FontSize="12"
+							Foreground="{DynamicResource ErrorBrush}"
+							Text="{Binding ConflictFileList}"
+							TextWrapping="Wrap" />
+					</Border>
+					<StackPanel Orientation="Horizontal">
+						<AduSkin:AduButton
+							Width="Auto"
+							Margin="0,0,10,0"
+							Padding="15,8"
+							Background="{DynamicResource PrimaryBrush}"
+							Command="{Binding ResolveConflictOpenVSCommand}"
+							Content="用 VS 打开" />
+						<AduSkin:AduButton
+							Width="Auto"
+							Margin="0,0,10,0"
+							Padding="15,8"
+							Background="{DynamicResource WarnBrush}"
+							Command="{Binding ResolveConflictAutoStashCommand}"
+							Content="自动 Stash" />
+						<AduSkin:AduButton
+							Width="Auto"
+							Padding="15,8"
+							Command="{Binding ResolveConflictAbortCommand}"
+							Content="放弃 Pull" />
+					</StackPanel>
+				</StackPanel>
+			</Border>
+		</Border>
+	</Grid>
 </AduSkin:AduWindow>

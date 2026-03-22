@@ -27,8 +27,11 @@ namespace DotNetBuilder.ViewModels
     public class MainViewModel : ViewModelBase
     {
         private readonly GitService _gitService;
+        private readonly GitSyncService _gitSyncService;
         private readonly MSBuildService _msbuildService;
         private readonly ConfigService _configService;
+        private readonly SyncViewModel _syncViewModel;
+
         private string _selectedPath = string.Empty;
         private string _logOutput = string.Empty;
         private bool _isBusy;
@@ -43,16 +46,29 @@ namespace DotNetBuilder.ViewModels
         private bool _showGitLog = true;
         private bool _showBuildLog = false; // Build编译日志，默认不显示
 
+        // 全局同步选项
+        private PullStrategy _globalPullStrategy = PullStrategy.Auto;
+        private ConflictAction _globalConflictAction = ConflictAction.Prompt;
+        private bool _globalAutoCommitWhenNoMessage = false;
+
         public MainViewModel()
         {
             _gitService = new GitService();
+            _gitSyncService = new GitSyncService();
             _msbuildService = new MSBuildService();
             _configService = new ConfigService();
+
+            // 初始化 SyncViewModel
+            _syncViewModel = new SyncViewModel(
+                _gitService,
+                _gitSyncService,
+                msg => AppendLog(msg),
+                GetSyncOptions,
+                () => Projects.Where(p => p.IsSelected));
 
             // 初始化命令
             SelectDirectoryCommand = new AsyncRelayCommand(SelectDirectoryAsync);
             ScanProjectsCommand = new AsyncRelayCommand(ScanProjectsAsync);
-            SyncSelectedCommand = new AsyncRelayCommand(SyncSelectedAsync, () => !IsBusy && SelectedProjects.Any());
             BuildSelectedCommand = new AsyncRelayCommand(BuildSelectedAsync, () => !IsBusy && SelectedProjects.Any(p => p.IsDotNetProject));
             RunSelectedCommand = new RelayCommand(RunSelectedAsync, _ => SelectedProject != null && !string.IsNullOrEmpty(SelectedProject.ExecuteFile));
             MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
@@ -62,7 +78,6 @@ namespace DotNetBuilder.ViewModels
             SaveConfigCommand = new AsyncRelayCommand(SaveConfigAsync, () => Projects.Any());
 
             // 单个项目操作命令
-            SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
             BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
             RemoveProjectCommand = new RelayCommand(RemoveProject);
             OpenFolderCommand = new RelayCommand(OpenFolder);
@@ -98,6 +113,21 @@ namespace DotNetBuilder.ViewModels
         public ObservableCollection<string> Executables { get; } = new();
 
         public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Release", "Debug" };
+
+        public ObservableCollection<PullStrategy> PullStrategies { get; } = new()
+        {
+            PullStrategy.Auto,
+            PullStrategy.Merge,
+            PullStrategy.Rebase,
+            PullStrategy.CommitOnly
+        };
+
+        public ObservableCollection<ConflictAction> ConflictActions { get; } = new()
+        {
+            ConflictAction.Prompt,
+            ConflictAction.AutoStash,
+            ConflictAction.Abort
+        };
 
         public string SelectedPath
         {
@@ -205,27 +235,83 @@ namespace DotNetBuilder.ViewModels
             set => SetProperty(ref _showBuildLog, value);
         }
 
+        /// <summary>
+        /// 全局 Pull 策略
+        /// </summary>
+        public PullStrategy GlobalPullStrategy
+        {
+            get => _globalPullStrategy;
+            set => SetProperty(ref _globalPullStrategy, value);
+        }
+
+        /// <summary>
+        /// 全局冲突处理方式
+        /// </summary>
+        public ConflictAction GlobalConflictAction
+        {
+            get => _globalConflictAction;
+            set => SetProperty(ref _globalConflictAction, value);
+        }
+
+        /// <summary>
+        /// 全局无提交信息时是否自动提交
+        /// </summary>
+        public bool GlobalAutoCommitWhenNoMessage
+        {
+            get => _globalAutoCommitWhenNoMessage;
+            set => SetProperty(ref _globalAutoCommitWhenNoMessage, value);
+        }
+
+        /// <summary>
+        /// 获取同步选项（从全局设置）
+        /// </summary>
+        private SyncOptions GetSyncOptions() => new()
+        {
+            PullStrategy = GlobalPullStrategy,
+            ConflictAction = GlobalConflictAction,
+            AutoCommitWhenNoMessage = GlobalAutoCommitWhenNoMessage
+        };
+
         #endregion
 
         #region 命令
 
         public ICommand SelectDirectoryCommand { get; }
         public ICommand ScanProjectsCommand { get; }
-        public ICommand SyncSelectedCommand { get; }
         public ICommand BuildSelectedCommand { get; }
+        public ICommand BuildSingleCommand { get; }
         public ICommand RunSelectedCommand { get; }
         public ICommand MoveUpCommand { get; }
         public ICommand MoveDownCommand { get; }
         public ICommand ClearLogCommand { get; }
         public ICommand RefreshStatusCommand { get; }
-        public ICommand SyncSingleCommand { get; }
-        public ICommand BuildSingleCommand { get; }
         public ICommand SaveConfigCommand { get; }
         public ICommand RemoveProjectCommand { get; }
         public ICommand OpenFolderCommand { get; }
         public ICommand OpenVSCommand { get; }
         public ICommand OpenVSCodeCommand { get; }
         public ICommand AddProjectCommand { get; }
+
+        // 同步命令 - 委托给 SyncViewModel
+        public ICommand SyncSelectedCommand => _syncViewModel.SyncSelectedCommand;
+        public ICommand SyncSingleCommand => _syncViewModel.SyncSingleCommand;
+        public ICommand ResolveConflictOpenVSCommand => _syncViewModel.ResolveConflictOpenVSCommand;
+        public ICommand ResolveConflictAbortCommand => _syncViewModel.ResolveConflictAbortCommand;
+        public ICommand ResolveConflictAutoStashCommand => _syncViewModel.ResolveConflictAutoStashCommand;
+
+        // 冲突对话框属性
+        public GitProject? ConflictProject => _syncViewModel.ConflictProject;
+        public List<string>? ConflictFiles => _syncViewModel.ConflictFiles;
+        public bool ShowConflictDialog
+        {
+            get => _syncViewModel.ShowConflictDialog;
+            set
+            {
+                _syncViewModel.ShowConflictDialog = value;
+                OnPropertyChanged();
+            }
+        }
+        public string ConflictFileList => _syncViewModel.ConflictFileList;
 
         #endregion
 
@@ -511,90 +597,6 @@ namespace DotNetBuilder.ViewModels
                     await _gitService.UpdateProjectStatusAsync(project);
                 }
                 AppendLog("状态刷新完成\n");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
-
-        private async Task SyncSelectedAsync()
-        {
-            var selectedProjects = SelectedProjects.ToList();
-            if (!selectedProjects.Any())
-            {
-                AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            IsBusy = true;
-            AppendLog($"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n");
-
-            try
-            {
-                // 并行同步所有项目
-                var tasks = selectedProjects.Select(async project =>
-                {
-                    // 设置同步状态
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        project.ClearError();
-                        project.IsSyncing = true;
-                        project.IsExpanded = true; // 自动展开
-                    });
-
-                    try
-                    {
-                        var progress = new Progress<string>(msg =>
-                        {
-                            AppendLog($"[{project.Name}] {msg}\n");
-                        });
-
-                        await _gitService.UpdateProjectStatusAsync(project);
-                        var commitMsg = project.CommitMessage;
-                        var result = await _gitService.SyncProjectAsync(project, commitMsg, progress);
-
-                        if (result.Success)
-                        {
-                            await _gitService.UpdateProjectStatusAsync(project);
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                            {
-                                project.IsExpanded = false; // 成功则收起
-                            });
-                            AppendLog($"[{project.Name}] 同步成功\n");
-                        }
-                        else
-                        {
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                            {
-                                project.ErrorMessage = result.Message;
-                                project.IsExpanded = true; // 失败则保持展开
-                            });
-                            AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            project.ErrorMessage = ex.Message;
-                            project.IsExpanded = true;
-                        });
-                    }
-                    finally
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
-                    }
-                });
-
-                await Task.WhenAll(tasks);
-
-                AppendLog($"\n========== 同步完成 ==========\n");
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"\n同步出错: {ex.Message}\n");
             }
             finally
             {
@@ -935,53 +937,6 @@ namespace DotNetBuilder.ViewModels
                 // 如果移除的是当前选中的项目，清空选择
                 if (SelectedProject == project)
                     SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
-            }
-        }
-
-        /// <summary>
-        /// 同步单个项目
-        /// </summary>
-        private async Task SyncSingleAsync(object? parameter)
-        {
-            if (parameter is not GitProject project)
-                return;
-
-            AppendLog($"\n========== 同步项目: {project.Name} ==========\n");
-
-            try
-            {
-                project.ClearError();
-                project.IsSyncing = true;
-                project.IsExpanded = true;
-
-                var progress = new Progress<string>(msg =>
-                {
-                    AppendLog($"[{project.Name}] {msg}\n");
-                });
-
-                await _gitService.UpdateProjectStatusAsync(project);
-                var result = await _gitService.SyncProjectAsync(project, project.CommitMessage, progress);
-
-                if (result.Success)
-                {
-                    await _gitService.UpdateProjectStatusAsync(project);
-                    project.IsExpanded = false;
-                    AppendLog($"[{project.Name}] 同步成功\n");
-                }
-                else
-                {
-                    project.ErrorMessage = result.Message;
-                    AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
-                }
-            }
-            catch (Exception ex)
-            {
-                AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
-                project.ErrorMessage = ex.Message;
-            }
-            finally
-            {
-                project.IsSyncing = false;
             }
         }
 

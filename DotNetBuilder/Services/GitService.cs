@@ -222,6 +222,7 @@ namespace DotNetBuilder.Services
         /// <param name="commitMessage">提交信息（可选）</param>
         /// <param name="progress">进度回调</param>
         /// <returns>同步结果</returns>
+        [Obsolete("请使用 GitSyncService.SyncProjectAsync 代替")]
         public async Task<GitSyncResult> SyncProjectAsync(GitProject project, string? commitMessage = null, IProgress<string>? progress = null)
         {
             var result = new GitSyncResult { ProjectName = project.Name };

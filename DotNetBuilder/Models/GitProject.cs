@@ -273,6 +273,60 @@ namespace DotNetBuilder.Models
             }
         }
 
+        private PullStrategy _pullStrategy = PullStrategy.Auto;
+
+        /// <summary>
+        /// Pull 策略
+        /// </summary>
+        public PullStrategy PullStrategy
+        {
+            get => _pullStrategy;
+            set
+            {
+                if (_pullStrategy != value)
+                {
+                    _pullStrategy = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private ConflictAction _conflictAction = ConflictAction.Prompt;
+
+        /// <summary>
+        /// 冲突时的处理方式
+        /// </summary>
+        public ConflictAction ConflictAction
+        {
+            get => _conflictAction;
+            set
+            {
+                if (_conflictAction != value)
+                {
+                    _conflictAction = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        private bool _autoCommitWhenNoMessage = false;
+
+        /// <summary>
+        /// 无提交信息时是否自动提交
+        /// </summary>
+        public bool AutoCommitWhenNoMessage
+        {
+            get => _autoCommitWhenNoMessage;
+            set
+            {
+                if (_autoCommitWhenNoMessage != value)
+                {
+                    _autoCommitWhenNoMessage = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
