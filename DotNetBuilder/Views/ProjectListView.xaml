@@ -22,7 +22,7 @@
             <!--  列表头部  -->
             <Border
                 Grid.Row="0"
-                Margin="0,0,0,10"
+                Margin="0,0,0,0"
                 Padding="5,0,5,10"
                 BorderBrush="#E0E0E0"
                 BorderThickness="0,0,0,1">
@@ -441,15 +441,16 @@
                             Height="30"
                             Margin="5,0,0,0"
                             AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
+                            AduAttach:PathDataAttach.Width="12"
                             BorderThickness="1"
                             Command="{Binding RunSelectedCommand}"
                             CommandParameter="{Binding SelectedProject}"
                             ToolTip="运行项目" />
                         <AduSkin:AduComboBox
-                            Width="120"
-                            MaxWidth="300"
+                            MaxWidth="350"
                             Margin="5,0,0,0"
                             DisplayMemberPath="Path"
+                            IsShowFilterBox="True"
                             ItemsSource="{Binding Projects}"
                             SelectedItem="{Binding SelectedProject}" />
                     </StackPanel>
