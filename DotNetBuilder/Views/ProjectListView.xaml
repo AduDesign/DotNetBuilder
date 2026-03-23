@@ -72,7 +72,7 @@
                 AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
                 AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush05}"
                 ItemsSource="{Binding Projects}"
-                SelectedItem="{Binding SelectedItem}">
+                SelectedItem="{Binding SelectedProject}">
                 <AduSkin:AduListBox.Resources>
                     <Style BasedOn="{StaticResource AduPathIconButton}" TargetType="AduSkin:AduPathIconButton">
                         <Setter Property="BorderThickness" Value="1" />
@@ -406,21 +406,21 @@
                         <AduSkin:AduFormBox Margin="5,0,0,0" Header="Pull 策略">
                             <AduSkin:AduComboBox
                                 DisplayMemberPath=""
-                                ItemsSource="{Binding OutputViewModel.PullStrategies}"
-                                SelectedItem="{Binding OutputViewModel.GlobalPullStrategy}"
+                                ItemsSource="{Binding PullStrategies}"
+                                SelectedItem="{Binding GlobalPullStrategy}"
                                 ToolTip="Pull" />
                         </AduSkin:AduFormBox>
                         <AduSkin:AduFormBox Margin="5,0,0,0" Header="Conflict">
                             <AduSkin:AduComboBox
                                 DisplayMemberPath=""
-                                ItemsSource="{Binding OutputViewModel.ConflictActions}"
-                                SelectedItem="{Binding OutputViewModel.GlobalConflictAction}"
+                                ItemsSource="{Binding ConflictActions}"
+                                SelectedItem="{Binding GlobalConflictAction}"
                                 ToolTip="冲突时处理方式" />
                         </AduSkin:AduFormBox>
                         <AduSkin:AduSwitch
                             Margin="5,0,0,0"
                             Content="无信息时自动提交"
-                            IsChecked="{Binding OutputViewModel.GlobalAutoCommitWhenNoMessage}"
+                            IsChecked="{Binding GlobalAutoCommitWhenNoMessage}"
                             ToolTip="未填写提交信息时，使用默认信息提交" />
                     </StackPanel>
 

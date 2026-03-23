@@ -23,8 +23,7 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private bool _isBusy;
 
-        [ObservableProperty]
-        private GitProject? _selectedItem;
+        public GitProject? SelectedItem => SelectedProject;
 
         [ObservableProperty]
         private GitProject? _selectedProject;
@@ -36,6 +35,31 @@ namespace DotNetBuilder.ViewModels
         private bool? _isSelectedAll;
 
         public OutputViewModel OutputViewModel => _outputViewModel;
+
+        // 全局同步选项（供 XAML 直接绑定）
+        public ObservableCollection<PullStrategy> PullStrategies { get; } = new()
+        {
+            PullStrategy.Auto,
+            PullStrategy.Merge,
+            PullStrategy.Rebase,
+            PullStrategy.CommitOnly
+        };
+
+        public ObservableCollection<ConflictAction> ConflictActions { get; } = new()
+        {
+            ConflictAction.Prompt,
+            ConflictAction.AutoStash,
+            ConflictAction.Abort
+        };
+
+        [ObservableProperty]
+        private PullStrategy _globalPullStrategy = PullStrategy.Auto;
+
+        [ObservableProperty]
+        private ConflictAction _globalConflictAction = ConflictAction.Prompt;
+
+        [ObservableProperty]
+        private bool _globalAutoCommitWhenNoMessage = false;
 
         public ObservableCollection<GitProject> Projects { get; } = new();
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
@@ -234,7 +258,7 @@ namespace DotNetBuilder.ViewModels
         [RelayCommand]
         private async Task RunSelectedAsync(GitProject? project)
         {
-            GitProject? targetProject = project ?? SelectedItem;
+            GitProject? targetProject = project ?? SelectedProject;
             if (targetProject == null || string.IsNullOrEmpty(targetProject.ExecuteFile))
             {
                 _appendLog("无可运行的项目\n");
@@ -466,7 +490,7 @@ namespace DotNetBuilder.ViewModels
                 project.IsExpanded = true;
 
                 var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                var options = _outputViewModel.GetSyncOptions();
+                var options = GetSyncOptions();
 
                 await _gitService.UpdateProjectStatusAsync(project);
                 var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
@@ -602,7 +626,7 @@ namespace DotNetBuilder.ViewModels
                     try
                     {
                         var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                        var options = _outputViewModel.GetSyncOptions();
+                        var options = GetSyncOptions();
 
                         await _gitService.UpdateProjectStatusAsync(project);
                         var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
@@ -633,6 +657,13 @@ namespace DotNetBuilder.ViewModels
             }
         }
         private bool CanSyncSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
+
+        private SyncOptions GetSyncOptions() => new()
+        {
+            PullStrategy = GlobalPullStrategy,
+            ConflictAction = GlobalConflictAction,
+            AutoCommitWhenNoMessage = GlobalAutoCommitWhenNoMessage
+        };
 
         private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)
         {
@@ -678,7 +709,6 @@ namespace DotNetBuilder.ViewModels
                 _appendLog($"[{project.Name}] 同步失败: {result.Message}\n");
             }
         }
-
         #endregion
     }
 }
