@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Services;
@@ -17,6 +16,7 @@ namespace DotNetBuilder.ViewModels
         private Action? _onSaveProject;
         private Func<Task>? _onAddProject;
         private Func<Task>? _onRefreshStatus;
+        private Action<string>? _onScanAndAddProjects;
 
         [ObservableProperty]
         private string _projectDisplayName = string.Empty;
@@ -50,10 +50,19 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
+        private void ScanAndAddProjects()
+        {
+            var folderPath = _navigationService.SelectDirectory();
+            if (!string.IsNullOrEmpty(folderPath))
+            {
+                _onScanAndAddProjects?.Invoke(folderPath);
+            }
+        }
+
         [RelayCommand(CanExecute = nameof(CanSaveProject))]
         private void SaveProject() => _onSaveProject?.Invoke();
         private bool CanSaveProject() => HasProject;
-
 
         [RelayCommand(CanExecute = nameof(CanAddProject))]
         private async Task AddProject()
@@ -74,34 +83,27 @@ namespace DotNetBuilder.ViewModels
         /// <summary>
         /// 设置新建项目回调
         /// </summary>
-        public void SetOnNewProject(Action callback)
-        {
-            _onNewProject = callback;
-        }
+        public void SetOnNewProject(Action callback) => _onNewProject = callback;
 
         /// <summary>
         /// 设置保存项目回调
         /// </summary>
-        public void SetOnSaveProject(Action callback)
-        {
-            _onSaveProject = callback;
-        }
+        public void SetOnSaveProject(Action callback) => _onSaveProject = callback;
 
         /// <summary>
         /// 设置添加项目回调
         /// </summary>
-        public void SetOnAddProject(Func<Task> callback)
-        {
-            _onAddProject = callback;
-        }
+        public void SetOnAddProject(Func<Task> callback) => _onAddProject = callback;
 
         /// <summary>
         /// 设置刷新状态回调
         /// </summary>
-        public void SetOnRefreshStatus(Func<Task> callback)
-        {
-            _onRefreshStatus = callback;
-        }
+        public void SetOnRefreshStatus(Func<Task> callback) => _onRefreshStatus = callback;
+
+        /// <summary>
+        /// 设置扫描并添加项目回调
+        /// </summary>
+        public void SetOnScanAndAddProjects(Action<string> callback) => _onScanAndAddProjects = callback;
 
         partial void OnHasProjectChanged(bool value)
         {

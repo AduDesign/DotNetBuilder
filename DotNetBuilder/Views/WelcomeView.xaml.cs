@@ -11,15 +11,5 @@ namespace DotNetBuilder.Views
         {
             InitializeComponent();
         }
-
-        private void RecentProject_DoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (DataContext is WelcomeViewModel viewModel &&
-                sender is ListBox listBox &&
-                listBox.SelectedItem is RecentProject recent)
-            {
-                viewModel.OpenRecentProject(recent);
-            }
-        }
     }
 }

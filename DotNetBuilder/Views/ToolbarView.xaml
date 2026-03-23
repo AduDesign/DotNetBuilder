@@ -30,9 +30,9 @@
 				Orientation="Horizontal">
 				<AduSkin:AduButton
 					Padding="8,4"
-					Command="{Binding OpenProjectCommand}"
+					Command="{Binding ScanAndAddProjectsCommand}"
 					Content="扫描Git目录"
-					ToolTip="打开已有项目" />
+					ToolTip="选择文件夹，扫描其中的 Git 项目并添加（不重复）" />
 				<AduSkin:AduButton
 					Margin="5,0,0,0"
 					Command="{Binding AddProjectCommand}"

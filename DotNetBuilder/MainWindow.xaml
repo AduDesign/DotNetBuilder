@@ -28,10 +28,11 @@
                     Header="新建项目(_N)"
                     InputGestureText="Ctrl+N">
                     <AduSkin:AduMenuItem.Icon>
-                        <TextBlock
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="12"
-                            Text="&#xE710;" />
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_NewProject}"
+                            Fill="{DynamicResource NormalForeground}"
+                            Stretch="Uniform" />
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
                 <AduSkin:AduMenuItem
@@ -39,10 +40,11 @@
                     Header="打开项目(_O)"
                     InputGestureText="Ctrl+O">
                     <AduSkin:AduMenuItem.Icon>
-                        <TextBlock
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="12"
-                            Text="&#xE838;" />
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_OpenProject}"
+                            Fill="{DynamicResource NormalForeground}"
+                            Stretch="Uniform" />
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
                 <AduSkin:AduMenuItem
@@ -50,10 +52,11 @@
                     Header="保存项目(_S)"
                     InputGestureText="Ctrl+S">
                     <AduSkin:AduMenuItem.Icon>
-                        <TextBlock
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="12"
-                            Text="&#xE74E;" />
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_SaveProjcect}"
+                            Fill="{DynamicResource NormalForeground}"
+                            Stretch="Uniform" />
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
                 <Separator />
@@ -61,6 +64,13 @@
                     x:Name="RecentProjectsMenu"
                     Header="最近项目(_R)"
                     ItemsSource="{Binding WelcomeViewModel.RecentProjects}">
+                    <AduSkin:AduMenuItem.Icon>
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_History}"
+                            Fill="{DynamicResource NormalForeground}"
+                            Stretch="Uniform" />
+                    </AduSkin:AduMenuItem.Icon>
                     <AduSkin:AduMenuItem.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Name}" ToolTip="{Binding FilePath}" />
@@ -75,10 +85,11 @@
                 <Separator />
                 <AduSkin:AduMenuItem Command="{Binding CloseProjectCommand}" Header="关闭项目(_C)">
                     <AduSkin:AduMenuItem.Icon>
-                        <TextBlock
-                            FontFamily="Segoe MDL2 Assets"
-                            FontSize="12"
-                            Text="&#xE711;" />
+                        <Path
+                            Width="10"
+                            Data="{DynamicResource Icon_SystemClose}"
+                            Fill="{DynamicResource NormalForeground}"
+                            Stretch="Uniform" />
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>

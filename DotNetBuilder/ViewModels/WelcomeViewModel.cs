@@ -17,7 +17,11 @@ namespace DotNetBuilder.ViewModels
         // 回调函数
         private Action? _onNewProject;
 
-        public ObservableCollection<RecentProject> RecentProjects { get; } = new();
+        [ObservableProperty]
+        private ObservableCollection<RecentProject> _recentProjects = new();
+         
+        [ObservableProperty]
+        private RecentProject _selectedProject;
 
         public WelcomeViewModel(ProjectService projectService, NavigationService navigationService)
         {
@@ -57,7 +61,7 @@ namespace DotNetBuilder.ViewModels
                 RecentProjects.Add(item);
             }
         }
-
+        [RelayCommand]
         public void OpenRecentProject(RecentProject recent)
         {
             _navigationService.RequestOpenProject(recent.FilePath);

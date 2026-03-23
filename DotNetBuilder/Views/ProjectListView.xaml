@@ -35,7 +35,10 @@
                         <ColumnDefinition Width="110" />
                     </Grid.ColumnDefinitions>
 
-                    <AduSkin:AduCheckBox IsChecked="{Binding IsSelectedAll}" IsThreeState="True" />
+                    <AduSkin:AduCheckBox
+                        Content=""
+                        IsChecked="{Binding IsSelectedAll}"
+                        IsThreeState="True" />
                     <TextBlock
                         Grid.Column="1"
                         VerticalAlignment="Center"
@@ -143,6 +146,7 @@
                                         Grid.Column="0"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
+                                        Content=""
                                         IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                     <!--  项目信息  -->
@@ -229,7 +233,7 @@
                                                 AduAttach:PathDataAttach.Margin="0"
                                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
                                                 AduAttach:PathDataAttach.Width="12"
-                                                Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip="单独同步此项目"
                                                 Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToReVisibility}}" />
@@ -250,7 +254,7 @@
                                                 AduAttach:PathDataAttach.Margin="0"
                                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Build}"
                                                 AduAttach:PathDataAttach.Width="12"
-                                                Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip="单独构建此项目"
                                                 Visibility="{Binding IsBuilding, Converter={StaticResource BooleanToReVisibility}}" />
@@ -384,65 +388,73 @@
             </AduSkin:AduListBox>
 
             <!--  底部操作区  -->
-            <StackPanel Grid.Row="2" Margin="0,10,0,0">
-                <!--  Git 同步选项  -->
-                <StackPanel Orientation="Horizontal">
-                    <AduSkin:AduButton
-                        Width="Auto"
-                        Padding="10,0"
-                        Command="{Binding DataContext.SyncSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Content="一键Git同步" />
-                    <AduSkin:AduFormBox Margin="5,0,0,0" Header="Git同步:">
-                        <StackPanel Orientation="Horizontal">
+            <Border
+                Grid.Row="2"
+                Margin="0,6,0,0"
+                BorderBrush="{DynamicResource NormalBorderBrush}"
+                BorderThickness="0,1,0,0">
+                <StackPanel Margin="0,6,0,0">
+                    <!--  Git 同步选项  -->
+                    <StackPanel Orientation="Horizontal">
+                        <AduSkin:AduPathIconButton
+                            Width="30"
+                            Height="30"
+                            AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
+                            BorderThickness="1"
+                            Command="{Binding SyncSelectedCommand}"
+                            ToolTip="一键Git同步" />
+                        <AduSkin:AduFormBox Margin="5,0,0,0" Header="Pull 策略">
                             <AduSkin:AduComboBox
-                                Width="90"
-                                Margin="10,0,0,0"
                                 DisplayMemberPath=""
-                                ItemsSource="{Binding DataContext.OutputViewModel.PullStrategies, RelativeSource={RelativeSource AncestorType=Window}}"
-                                SelectedItem="{Binding DataContext.OutputViewModel.GlobalPullStrategy, RelativeSource={RelativeSource AncestorType=Window}}"
-                                ToolTip="Pull 策略" />
-                            <AduSkin:AduComboBox
-                                Width="90"
-                                Margin="5,0,0,0"
-                                DisplayMemberPath=""
-                                ItemsSource="{Binding DataContext.OutputViewModel.ConflictActions, RelativeSource={RelativeSource AncestorType=Window}}"
-                                SelectedItem="{Binding DataContext.OutputViewModel.GlobalConflictAction, RelativeSource={RelativeSource AncestorType=Window}}"
-                                ToolTip="冲突时处理方式" />
-                            <AduSkin:AduCheckBox
-                                Margin="5,0,0,0"
-                                Content="无信息时自动提交"
-                                IsChecked="{Binding DataContext.OutputViewModel.GlobalAutoCommitWhenNoMessage, RelativeSource={RelativeSource AncestorType=Window}}"
-                                ToolTip="未填写提交信息时，使用默认信息提交" />
-                        </StackPanel>
-                    </AduSkin:AduFormBox>
-                </StackPanel>
-
-                <!--  构建和运行选项  -->
-                <Grid Margin="0,5,0,0">
-                    <AduSkin:AduButton
-                        Width="Auto"
-                        Margin="0,0"
-                        Padding="10,0"
-                        HorizontalAlignment="Left"
-                        Command="{Binding DataContext.BuildSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Content="一键构建" />
-                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
-                        <AduSkin:AduFormBox Header="运行项目">
-                            <AduSkin:AduComboBox
-                                Width="120"
-                                DisplayMemberPath="Path"
-                                ItemsSource="{Binding DataContext.Projects, RelativeSource={RelativeSource AncestorType=Window}}"
-                                SelectedItem="{Binding DataContext.SelectedProject, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                ItemsSource="{Binding OutputViewModel.PullStrategies}"
+                                SelectedItem="{Binding OutputViewModel.GlobalPullStrategy}"
+                                ToolTip="Pull" />
                         </AduSkin:AduFormBox>
-                        <AduSkin:AduButton
-                            Width="Auto"
-                            Margin="10,0,0,0"
-                            Padding="10,0"
-                            Command="{Binding DataContext.RunSelectedCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                            Content="运行程序" />
+                        <AduSkin:AduFormBox Margin="5,0,0,0" Header="Conflict">
+                            <AduSkin:AduComboBox
+                                DisplayMemberPath=""
+                                ItemsSource="{Binding OutputViewModel.ConflictActions}"
+                                SelectedItem="{Binding OutputViewModel.GlobalConflictAction}"
+                                ToolTip="冲突时处理方式" />
+                        </AduSkin:AduFormBox>
+                        <AduSkin:AduSwitch
+                            Margin="5,0,0,0"
+                            Content="无信息时自动提交"
+                            IsChecked="{Binding OutputViewModel.GlobalAutoCommitWhenNoMessage}"
+                            ToolTip="未填写提交信息时，使用默认信息提交" />
                     </StackPanel>
-                </Grid>
-            </StackPanel>
+
+                    <!--  构建和运行选项  -->
+                    <StackPanel Margin="0,5,0,0" Orientation="Horizontal">
+                        <AduSkin:AduPathIconButton
+                            Width="30"
+                            Height="30"
+                            Margin="0,0"
+                            HorizontalAlignment="Left"
+                            AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Build}"
+                            BorderThickness="1"
+                            Command="{Binding BuildSelectedCommand}"
+                            ToolTip="一键生成" />
+
+                        <AduSkin:AduPathIconButton
+                            Width="30"
+                            Height="30"
+                            Margin="5,0,0,0"
+                            AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Play}"
+                            BorderThickness="1"
+                            Command="{Binding RunSelectedCommand}"
+                            CommandParameter="{Binding SelectedProject}"
+                            ToolTip="运行项目" />
+                        <AduSkin:AduComboBox
+                            Width="120"
+                            MaxWidth="300"
+                            Margin="5,0,0,0"
+                            DisplayMemberPath="Path"
+                            ItemsSource="{Binding Projects}"
+                            SelectedItem="{Binding SelectedProject}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

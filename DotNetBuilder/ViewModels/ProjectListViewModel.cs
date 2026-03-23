@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Windows;
+using AduSkin.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
@@ -12,9 +14,14 @@ namespace DotNetBuilder.ViewModels
     public partial class ProjectListViewModel : ObservableObject
     {
         private readonly GitService _gitService;
+        private readonly GitSyncService _gitSyncService;
         private readonly MSBuildService _msbuildService;
         private readonly OutputViewModel _outputViewModel;
+        private readonly ConflictDialogViewModel _conflictViewModel;
         private readonly Action<string> _appendLog;
+
+        [ObservableProperty]
+        private bool _isBusy;
 
         [ObservableProperty]
         private GitProject? _selectedItem;
@@ -28,22 +35,28 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private bool? _isSelectedAll;
 
+        public OutputViewModel OutputViewModel => _outputViewModel;
+
         public ObservableCollection<GitProject> Projects { get; } = new();
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
-        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Release", "Debug" };
+        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Debug","Release" };
         public ObservableCollection<string> Executables { get; } = new();
 
         public IEnumerable<GitProject> SelectedProjects => Projects.Where(p => p.IsSelected);
 
         public ProjectListViewModel(
             GitService gitService,
+            GitSyncService gitSyncService,
             MSBuildService msbuildService,
             OutputViewModel outputViewModel,
+            ConflictDialogViewModel conflictViewModel,
             Action<string> appendLog)
         {
             _gitService = gitService;
+            _gitSyncService = gitSyncService;
             _msbuildService = msbuildService;
             _outputViewModel = outputViewModel;
+            _conflictViewModel = conflictViewModel;
             _appendLog = appendLog;
         }
 
@@ -266,7 +279,11 @@ namespace DotNetBuilder.ViewModels
             project.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(GitProject.IsSelected))
+                {
+                    SyncSelectedCommand.NotifyCanExecuteChanged();
+                    BuildSelectedCommand.NotifyCanExecuteChanged();
                     UpdateIsSelectedAll();
+                }
             };
             Projects.Add(project);
             UpdateIsSelectedAll();
@@ -431,5 +448,237 @@ namespace DotNetBuilder.ViewModels
             SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
             _appendLog($"已加载 {Projects.Count} 个项目\n");
         }
+
+        #region 单项目命令
+
+        [RelayCommand]
+        private async Task SyncSingleAsync(GitProject? project)
+        {
+            if (project == null)
+                return;
+
+            _appendLog($"\n========== 同步项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsSyncing = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                var options = _outputViewModel.GetSyncOptions();
+
+                await _gitService.UpdateProjectStatusAsync(project);
+                var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
+
+                await HandleSyncResultAsync(project, result, progress);
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsSyncing = false;
+            }
+        }
+
+        #endregion
+
+        #region 一键命令
+
+        [RelayCommand(CanExecute = nameof(CanBuildSelected))]
+        private async Task BuildSelectedAsync()
+        {
+            _outputViewModel.LogOutput = string.Empty;
+
+            var selectedProjects = Projects.Where(p => p.IsSelected && p.IsDotNetProject).ToList();
+            if (!selectedProjects.Any())
+            {
+                AduMessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var projectsWithoutMSBuild = selectedProjects.Where(p => p.SelectedMSBuildVersion == null).ToList();
+            if (projectsWithoutMSBuild.Any())
+            {
+                var names = string.Join(", ", projectsWithoutMSBuild.Select(p => p.Name));
+                AduMessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            IsBusy = true;
+            _appendLog($"\n========== 开始构建 {selectedProjects.Count} 个项目 ==========\n");
+
+            try
+            {
+                bool buildFailed = false;
+                foreach (var project in selectedProjects.OrderBy(p => p.SortOrder))
+                {
+                    if (buildFailed)
+                    {
+                        _appendLog($"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n");
+                        continue;
+                    }
+
+                    await Application.Current.Dispatcher.InvokeAsync(() => project.ClearError());
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        project.IsBuilding = true;
+                        project.IsExpanded = true;
+                    });
+
+                    try
+                    {
+                        var progress = new Progress<string>(msg => _appendLog(msg + "\n"));
+                        _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}, 配置: {project.Configuration}\n");
+                        var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
+
+                        if (result.Success)
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
+                        }
+                        else
+                        {
+                            _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                            buildFailed = true;
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                                project.IsExpanded = true;
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
+                        buildFailed = true;
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsBuilding = false);
+                    }
+                }
+
+                _appendLog($"\n========== 构建完成 ==========\n");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        private bool CanBuildSelected() => !IsBusy && Projects.Any(p => p.IsSelected && p.IsDotNetProject);
+
+        [RelayCommand(CanExecute = nameof(CanSyncSelected))]
+        private async Task SyncSelectedAsync()
+        {
+            var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
+            if (!selectedProjects.Any())
+            {
+                AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            IsBusy = true;
+            _appendLog($"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n");
+
+            try
+            {
+                var tasks = selectedProjects.Select(async project =>
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        project.ClearError();
+                        project.IsSyncing = true;
+                        project.IsExpanded = true;
+                    });
+
+                    try
+                    {
+                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                        var options = _outputViewModel.GetSyncOptions();
+
+                        await _gitService.UpdateProjectStatusAsync(project);
+                        var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
+
+                        await HandleSyncResultAsync(project, result, progress);
+                    }
+                    catch (Exception ex)
+                    {
+                        _appendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                _appendLog($"\n========== 同步完成 ==========\n");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        private bool CanSyncSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
+
+        private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)
+        {
+            if (result.NeedsCommitMessage)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AduMessageBox.Show(
+                        $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
+                        "需要提交信息",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    project.IsExpanded = true;
+                    project.ErrorMessage = "请填写提交信息";
+                });
+                return;
+            }
+
+            if (result.HasConflict)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    _conflictViewModel.Show(project, result.ConflictFiles ?? new List<string>());
+                    project.ErrorMessage = result.ConflictMessage ?? "存在冲突";
+                    project.IsExpanded = true;
+                });
+                return;
+            }
+
+            if (result.Success)
+            {
+                await _gitService.UpdateProjectStatusAsync(project);
+                await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
+                _appendLog($"[{project.Name}] 同步成功\n");
+            }
+            else
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    project.ErrorMessage = result.Message;
+                    project.IsExpanded = true;
+                });
+                _appendLog($"[{project.Name}] 同步失败: {result.Message}\n");
+            }
+        }
+
+        #endregion
     }
 }

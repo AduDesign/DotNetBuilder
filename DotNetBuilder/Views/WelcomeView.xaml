@@ -1,88 +1,89 @@
 <UserControl
-	x:Class="DotNetBuilder.Views.WelcomeView"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
-	xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
-	Background="{DynamicResource NormalBackground}">
-	<Grid Margin="20" VerticalAlignment="Center">
-		<Grid.RowDefinitions>
-			<RowDefinition />
-			<RowDefinition Height="Auto" />
-		</Grid.RowDefinitions>
-		<!--  右侧操作区  -->
-		<StackPanel
-			Grid.Row="0"
-			HorizontalAlignment="Center"
-			VerticalAlignment="Center">
-			<!--  应用图标/标题  -->
-			<Image
-				Width="100"
-				Height="100"
-				Source="/Builder.png" />
-			<TextBlock
-				Margin="0,15,0,0"
-				HorizontalAlignment="Center"
-				FontSize="24"
-				FontWeight="Bold"
-				Foreground="{DynamicResource PrimaryBrush}"
-				Text=".NET Project Builder" />
-			<TextBlock
-				Margin="0,5,0,30"
-				HorizontalAlignment="Center"
-				FontSize="12"
-				Foreground="#888"
-				Text="批量管理 Git 仓库和 .NET 项目" />
-			<!--  操作按钮  -->
-			<StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-				<AduSkin:AduButton
-					Width="120"
-					Height="34"
-					Background="{DynamicResource PrimaryBrush}"
-					Command="{Binding NewProjectCommand}"
-					Content="新建项目"
-					Foreground="White" />
-				<AduSkin:AduButton
-					Width="120"
-					Height="34"
-					Margin="15,0,0,0"
-					Command="{Binding OpenProjectCommand}"
-					Content="打开项目" />
-			</StackPanel>
-		</StackPanel>
-		<!--  项目列表  -->
-		<AduSkin:AduListBox
-			x:Name="list"
-			Grid.Row="2"
-			MaxHeight="300"
-			Margin="0,30,0,0"
-			ItemsSource="{Binding RecentProjects}"
-			MouseDoubleClick="RecentProject_DoubleClick">
-			<AduSkin:AduListBox.ItemTemplate>
-				<DataTemplate>
-					<StackPanel Margin="5">
-						<TextBlock
-							FontSize="13"
-							FontWeight="Medium"
-							Text="{Binding Name}"
-							TextTrimming="CharacterEllipsis" />
-						<TextBlock
-							FontSize="11"
-							Foreground="#888"
-							Text="{Binding FilePath}"
-							TextTrimming="CharacterEllipsis"
-							ToolTip="{Binding FilePath}" />
-					</StackPanel>
-				</DataTemplate>
-			</AduSkin:AduListBox.ItemTemplate>
-			<AduSkin:AduListBox.ItemContainerStyle>
-				<Style TargetType="ListBoxItem">
-					<Setter Property="Padding" Value="10,8" />
-					<Setter Property="Cursor" Value="Hand" />
-					<EventSetter Event="MouseDoubleClick" Handler="RecentProject_DoubleClick" />
-				</Style>
-			</AduSkin:AduListBox.ItemContainerStyle>
-		</AduSkin:AduListBox>
+    x:Class="DotNetBuilder.Views.WelcomeView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
+    xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
+    xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
+    Background="{DynamicResource NormalBackground}">
+    <Grid Margin="20,40,20,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <!--  右侧操作区  -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top">
+            <!--  应用图标/标题  -->
+            <Image
+                Width="100"
+                Height="100"
+                Source="/Builder.png" />
+            <TextBlock
+                Margin="0,15,0,0"
+                HorizontalAlignment="Center"
+                FontSize="24"
+                FontWeight="Bold"
+                Foreground="{DynamicResource PrimaryBrush}"
+                Text=".NET Project Builder" />
+            <TextBlock
+                Margin="0,5,0,30"
+                HorizontalAlignment="Center"
+                FontSize="12"
+                Foreground="#888"
+                Text="批量管理 Git 仓库和 .NET 项目" />
+            <!--  操作按钮  -->
+            <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                <AduSkin:AduButton
+                    Width="120"
+                    Height="34"
+                    Background="{DynamicResource PrimaryBrush}"
+                    Command="{Binding NewProjectCommand}"
+                    Content="新建项目"
+                    Foreground="White" />
+                <AduSkin:AduButton
+                    Width="120"
+                    Height="34"
+                    Margin="15,0,0,0"
+                    Command="{Binding OpenProjectCommand}"
+                    Content="打开项目" />
+            </StackPanel>
+        </StackPanel>
+        <!--  项目列表  -->
+        <AduSkin:AduListBox
+            x:Name="list"
+            Grid.Row="1"
+            Margin="0,30,0,0"
+            ItemsSource="{Binding RecentProjects}"
+            SelectedItem="{Binding SelectedProject}">
+            <Interactivity:Interaction.Triggers>
+                <Interactivity:EventTrigger EventName="MouseDoubleClick">
+                    <Interactivity:EventToCommand Command="{Binding OpenRecentProjectCommand}" CommandParameter="{Binding SelectedProject}" />
+                </Interactivity:EventTrigger>
+            </Interactivity:Interaction.Triggers>
+            <AduSkin:AduListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="5">
+                        <TextBlock
+                            FontSize="13"
+                            FontWeight="Medium"
+                            Text="{Binding Name}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            FontSize="11"
+                            Foreground="#888"
+                            Text="{Binding FilePath}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip="{Binding FilePath}" />
+                    </StackPanel>
+                </DataTemplate>
+            </AduSkin:AduListBox.ItemTemplate>
+            <AduSkin:AduListBox.ItemContainerStyle>
+                <Style BasedOn="{StaticResource AduListBoxItem}" TargetType="AduSkin:AduListBoxItem">
+                    <Setter Property="Padding" Value="6" />
+                    <Setter Property="Cursor" Value="Hand" />
+                </Style>
+            </AduSkin:AduListBox.ItemContainerStyle>
+        </AduSkin:AduListBox>
 
-	</Grid>
+    </Grid>
 </UserControl>
