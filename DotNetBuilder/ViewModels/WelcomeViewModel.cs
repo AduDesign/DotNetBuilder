@@ -1,37 +1,52 @@
 using System.Collections.ObjectModel;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
 namespace DotNetBuilder.ViewModels
 {
     /// <summary>
-    /// 欢迎页 ViewModel
+    /// 欢迎页 ViewModel - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class WelcomeViewModel : ViewModelBase
+    public partial class WelcomeViewModel : ObservableObject
     {
         private readonly ProjectService _projectService;
-        private readonly Action<string> _appendLog;
+        private readonly NavigationService _navigationService;
 
-        public event Action<string>? OnProjectSelected;
-        public event Action? OnNewProjectRequested;
-        public event Action? OnOpenProjectRequested;
+        // 回调函数
+        private Action? _onNewProject;
 
-        public WelcomeViewModel(ProjectService projectService, Action<string> appendLog)
+        public ObservableCollection<RecentProject> RecentProjects { get; } = new();
+
+        public WelcomeViewModel(ProjectService projectService, NavigationService navigationService)
         {
             _projectService = projectService;
-            _appendLog = appendLog;
-
-            NewProjectCommand = new RelayCommand(_ => OnNewProjectRequested?.Invoke());
-            OpenProjectCommand = new RelayCommand(_ => OnOpenProjectRequested?.Invoke());
+            _navigationService = navigationService;
 
             _ = LoadRecentProjectsAsync();
         }
 
-        public ObservableCollection<RecentProject> RecentProjects { get; } = new();
+        [RelayCommand]
+        private void NewProject() => _onNewProject?.Invoke();
 
-        public ICommand NewProjectCommand { get; }
-        public ICommand OpenProjectCommand { get; }
+        [RelayCommand]
+        private void OpenProject()
+        {
+            var filePath = _navigationService.OpenFilePicker();
+            if (!string.IsNullOrEmpty(filePath))
+            {
+                _navigationService.RequestOpenProject(filePath);
+            }
+        }
+
+        /// <summary>
+        /// 设置新建项目回调
+        /// </summary>
+        public void SetOnNewProject(Action callback)
+        {
+            _onNewProject = callback;
+        }
 
         public async Task LoadRecentProjectsAsync()
         {
@@ -45,7 +60,7 @@ namespace DotNetBuilder.ViewModels
 
         public void OpenRecentProject(RecentProject recent)
         {
-            OnProjectSelected?.Invoke(recent.FilePath);
+            _navigationService.RequestOpenProject(recent.FilePath);
         }
     }
 }

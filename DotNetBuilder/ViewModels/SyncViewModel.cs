@@ -1,16 +1,15 @@
 using System.Collections.ObjectModel;
-using System.Windows;
-using System.Windows.Input;
-using AduSkin.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
 namespace DotNetBuilder.ViewModels
 {
     /// <summary>
-    /// 同步视图模型 - 负责 Git 同步相关的 UI 状态和命令
+    /// 同步视图模型 - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class SyncViewModel : ViewModelBase
+    public partial class SyncViewModel : ObservableObject
     {
         private readonly GitService _gitService;
         private readonly GitSyncService _gitSyncService;
@@ -18,10 +17,22 @@ namespace DotNetBuilder.ViewModels
         private readonly Func<SyncOptions> _getSyncOptions;
         private readonly Func<IEnumerable<GitProject>> _getSelectedProjects;
 
-        // 冲突状态
+        [ObservableProperty]
         private GitProject? _conflictProject;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ConflictFileList))]
         private List<string>? _conflictFiles;
+
+        [ObservableProperty]
         private bool _showConflictDialog;
+
+        [ObservableProperty]
+        private bool _isBusy;
+
+        public string ConflictFileList => ConflictFiles != null
+            ? string.Join("\n", ConflictFiles.Select(f => $"  - {f}"))
+            : string.Empty;
 
         public SyncViewModel(
             GitService gitService,
@@ -35,67 +46,17 @@ namespace DotNetBuilder.ViewModels
             _appendLog = appendLog;
             _getSyncOptions = getSyncOptions;
             _getSelectedProjects = getSelectedProjects;
-
-            // 命令
-            SyncSelectedCommand = new AsyncRelayCommand(SyncSelectedAsync, () => !IsBusy && _getSelectedProjects().Any());
-            SyncSingleCommand = new AsyncRelayCommand(SyncSingleAsync);
-            ResolveConflictOpenVSCommand = new RelayCommand(ResolveConflictOpenVS);
-            ResolveConflictAbortCommand = new AsyncRelayCommand(ResolveConflictAbortAsync);
-            ResolveConflictAutoStashCommand = new AsyncRelayCommand(ResolveConflictAutoStashAsync);
         }
 
-        private IEnumerable<GitProject> SelectedProjects => _getSelectedProjects();
-
-        private bool _isBusy;
-        public bool IsBusy
-        {
-            get => _isBusy;
-            set => SetProperty(ref _isBusy, value);
-        }
-
-        // 冲突项目属性
-        public GitProject? ConflictProject
-        {
-            get => _conflictProject;
-            set => SetProperty(ref _conflictProject, value);
-        }
-
-        public List<string>? ConflictFiles
-        {
-            get => _conflictFiles;
-            set => SetProperty(ref _conflictFiles, value);
-        }
-
-        public bool ShowConflictDialog
-        {
-            get => _showConflictDialog;
-            set => SetProperty(ref _showConflictDialog, value);
-        }
-
-        public string ConflictFileList => ConflictFiles != null
-            ? string.Join("\n", ConflictFiles.Select(f => $"  - {f}"))
-            : string.Empty;
-
-        #region Commands
-
-        public ICommand SyncSelectedCommand { get; }
-        public ICommand SyncSingleCommand { get; }
-        public ICommand ResolveConflictOpenVSCommand { get; }
-        public ICommand ResolveConflictAbortCommand { get; }
-        public ICommand ResolveConflictAutoStashCommand { get; }
-
-        #endregion
-
-        #region Sync Methods
-
+        [RelayCommand(CanExecute = nameof(CanSyncSelected))]
         private async Task SyncSelectedAsync()
         {
             var projects = SelectedProjects.ToList();
             if (!projects.Any())
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    AduSkin.Controls.AduMessageBox.Show("请先选择要同步的项目", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
                 });
                 return;
             }
@@ -107,7 +68,7 @@ namespace DotNetBuilder.ViewModels
             {
                 var tasks = projects.Select(async project =>
                 {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         project.ClearError();
                         project.IsSyncing = true;
@@ -131,7 +92,7 @@ namespace DotNetBuilder.ViewModels
                     catch (Exception ex)
                     {
                         _appendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                         {
                             project.ErrorMessage = ex.Message;
                             project.IsExpanded = true;
@@ -139,7 +100,7 @@ namespace DotNetBuilder.ViewModels
                     }
                     finally
                     {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
+                        await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
                     }
                 });
 
@@ -151,10 +112,12 @@ namespace DotNetBuilder.ViewModels
                 IsBusy = false;
             }
         }
+        private bool CanSyncSelected() => !IsBusy && SelectedProjects.Any();
 
-        private async Task SyncSingleAsync(object? parameter)
+        [RelayCommand]
+        private async Task SyncSingleAsync(GitProject? project)
         {
-            if (parameter is not GitProject project)
+            if (project == null)
                 return;
 
             _appendLog($"\n========== 同步项目: {project.Name} ==========\n");
@@ -188,67 +151,8 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)
-        {
-            if (result.NeedsCommitMessage)
-            {
-                // 需要用户输入提交信息 - 显示提示
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    AduMessageBox.Show(
-                        $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
-                        "需要提交信息",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
-
-                    // 自动展开项目，让用户输入提交信息
-                    project.IsExpanded = true;
-                    project.ErrorMessage = "请填写提交信息";
-                });
-                return;
-            }
-
-            if (result.HasConflict)
-            {
-                // 有冲突，显示冲突对话框
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    ConflictProject = project;
-                    ConflictFiles = result.ConflictFiles;
-                    OnPropertyChanged(nameof(ConflictFileList));
-                    ShowConflictDialog = true;
-
-                    project.ErrorMessage = result.ConflictMessage ?? "存在冲突";
-                    project.IsExpanded = true;
-                });
-                return;
-            }
-
-            if (result.Success)
-            {
-                await _gitService.UpdateProjectStatusAsync(project);
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    project.IsExpanded = false;
-                });
-                _appendLog($"[{project.Name}] 同步成功\n");
-            }
-            else
-            {
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    project.ErrorMessage = result.Message;
-                    project.IsExpanded = true;
-                });
-                _appendLog($"[{project.Name}] 同步失败: {result.Message}\n");
-            }
-        }
-
-        #endregion
-
-        #region Conflict Resolution
-
-        private void ResolveConflictOpenVS(object? parameter)
+        [RelayCommand]
+        private void ResolveConflictOpenVS()
         {
             if (ConflictProject == null)
                 return;
@@ -261,7 +165,6 @@ namespace DotNetBuilder.ViewModels
 
                 if (string.IsNullOrEmpty(targetPath))
                 {
-                    // 没有解决方案/项目文件，打开文件夹
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = "explorer.exe",
@@ -290,6 +193,7 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
         private async Task ResolveConflictAbortAsync()
         {
             if (ConflictProject == null)
@@ -320,6 +224,7 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
         private async Task ResolveConflictAutoStashAsync()
         {
             if (ConflictProject == null)
@@ -335,9 +240,7 @@ namespace DotNetBuilder.ViewModels
 
                 if (result.HasConflict)
                 {
-                    // 仍有冲突
                     ConflictFiles = result.ConflictFiles;
-                    OnPropertyChanged(nameof(ConflictFileList));
                     project.ErrorMessage = result.ConflictMessage ?? "Stash pop 时产生冲突";
                     _appendLog($"[{project.Name}] Stash pop 时产生冲突，请手动解决\n");
                 }
@@ -364,6 +267,58 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        #endregion
+        private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)
+        {
+            if (result.NeedsCommitMessage)
+            {
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    AduSkin.Controls.AduMessageBox.Show(
+                        $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
+                        "需要提交信息",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+
+                    project.IsExpanded = true;
+                    project.ErrorMessage = "请填写提交信息";
+                });
+                return;
+            }
+
+            if (result.HasConflict)
+            {
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ConflictProject = project;
+                    ConflictFiles = result.ConflictFiles;
+                    ShowConflictDialog = true;
+
+                    project.ErrorMessage = result.ConflictMessage ?? "存在冲突";
+                    project.IsExpanded = true;
+                });
+                return;
+            }
+
+            if (result.Success)
+            {
+                await _gitService.UpdateProjectStatusAsync(project);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    project.IsExpanded = false;
+                });
+                _appendLog($"[{project.Name}] 同步成功\n");
+            }
+            else
+            {
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    project.ErrorMessage = result.Message;
+                    project.IsExpanded = true;
+                });
+                _appendLog($"[{project.Name}] 同步失败: {result.Message}\n");
+            }
+        }
+
+        private IEnumerable<GitProject> SelectedProjects => _getSelectedProjects();
     }
 }

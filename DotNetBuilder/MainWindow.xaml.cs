@@ -26,15 +26,15 @@ namespace DotNetBuilder
             var args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && args[1].EndsWith(".bdproj", StringComparison.OrdinalIgnoreCase))
             {
-                await ViewModel.OpenProjectFromCommandLineAsync(args[1]);
+                await ViewModel.OpenProjectAsync(args[1]);
             }
         }
 
         private async void RecentProject_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is System.Windows.Controls.MenuItem menuItem && menuItem.DataContext is RecentProject recent)
+            if (sender is MenuItem menuItem && menuItem.DataContext is RecentProject recent)
             {
-                await ViewModel.OpenProjectFromCommandLineAsync(recent.FilePath);
+                await ViewModel.OpenProjectAsync(recent.FilePath);
             }
         }
 

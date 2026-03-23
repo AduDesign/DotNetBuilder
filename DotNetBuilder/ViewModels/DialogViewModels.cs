@@ -1,24 +1,32 @@
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 
 namespace DotNetBuilder.ViewModels
 {
     /// <summary>
-    /// 冲突对话框 ViewModel
+    /// 冲突对话框 ViewModel - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class ConflictDialogViewModel : ViewModelBase
+    public partial class ConflictDialogViewModel : ObservableObject
     {
-        private GitProject? _conflictProject;
-        private List<string>? _conflictFiles;
-        private bool _showDialog;
-
         private Action<string>? _appendLog;
+
+        [ObservableProperty]
+        private GitProject? _conflictProject;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ConflictFileList))]
+        private List<string>? _conflictFiles;
+
+        public string ConflictFileList => ConflictFiles != null
+            ? string.Join("\n", ConflictFiles.Select(f => $"  - {f}"))
+            : string.Empty;
+
+        [ObservableProperty]
+        private bool _showDialog;
 
         public ConflictDialogViewModel()
         {
-            ResolveConflictOpenVSCommand = new RelayCommand(ResolveConflictOpenVS);
-            ResolveConflictAbortCommand = new RelayCommand(_ => ResolveConflictAbort());
-            ResolveConflictAutoStashCommand = new RelayCommand(_ => ResolveConflictAutoStash());
         }
 
         public void SetAppendLog(Action<string> appendLog)
@@ -26,52 +34,7 @@ namespace DotNetBuilder.ViewModels
             _appendLog = appendLog;
         }
 
-        public GitProject? ConflictProject
-        {
-            get => _conflictProject;
-            set => SetProperty(ref _conflictProject, value);
-        }
-
-        public List<string>? ConflictFiles
-        {
-            get => _conflictFiles;
-            set
-            {
-                if (SetProperty(ref _conflictFiles, value))
-                {
-                    OnPropertyChanged(nameof(ConflictFileList));
-                }
-            }
-        }
-
-        public string ConflictFileList => ConflictFiles != null
-            ? string.Join("\n", ConflictFiles.Select(f => $"  - {f}"))
-            : string.Empty;
-
-        public bool ShowDialog
-        {
-            get => _showDialog;
-            set => SetProperty(ref _showDialog, value);
-        }
-
-        public ICommand ResolveConflictOpenVSCommand { get; }
-        public ICommand ResolveConflictAbortCommand { get; }
-        public ICommand ResolveConflictAutoStashCommand { get; }
-
-        public void Show(GitProject project, List<string> files)
-        {
-            ConflictProject = project;
-            ConflictFiles = files;
-            ShowDialog = true;
-        }
-
-        public void Close()
-        {
-            ShowDialog = false;
-            ConflictProject = null;
-            ConflictFiles = null;
-        }
-
+        [RelayCommand]
         private void ResolveConflictOpenVS(object? parameter)
         {
             if (ConflictProject == null) return;
@@ -112,18 +75,32 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
         private void ResolveConflictAbort()
         {
-            if (ConflictProject == null) return;
             // 关闭对话框，具体操作由 MainViewModel 处理
             Close();
         }
 
+        [RelayCommand]
         private void ResolveConflictAutoStash()
         {
-            if (ConflictProject == null) return;
             // 关闭对话框，具体操作由 MainViewModel 处理
             Close();
         }
-    } 
+
+        public void Show(GitProject project, List<string> files)
+        {
+            ConflictProject = project;
+            ConflictFiles = files;
+            ShowDialog = true;
+        }
+
+        public void Close()
+        {
+            ShowDialog = false;
+            ConflictProject = null;
+            ConflictFiles = null;
+        }
+    }
 }

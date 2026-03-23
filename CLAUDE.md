@@ -13,33 +13,48 @@ cd DotNetBuilder
 dotnet build
 ```
 
-The built executable is at `DotNetBuilder/bin/Debug/net10.0-windows/DotNetBuilder.exe`.
+For Release build:
+```bash
+dotnet build -c Release
+```
+
+The built executable is at `DotNetBuilder/bin/Debug/net10.0-windows/DotNetBuilder.exe` (Debug) or `DotNetBuilder/bin/Release/net10.0-windows/DotNetBuilder.exe` (Release).
 
 No test framework or linting tools are configured.
 
+**Runtime requirements:** .NET 10.0 Runtime, Git for Windows (in PATH), Visual Studio or .NET SDK (for MSBuild)
+
 ## Architecture
 
-**MVVM pattern** with three layers:
+**Coordinator pattern** with MVVM - `MainViewModel` orchestrates child ViewModels:
 
-- **Models/** - `GitProject` (represents a repo/project with status), `BuildModels` (MSBuildVersion, BuildResult, GitSyncResult)
-- **ViewModels/** - `MainViewModel` (central logic, 1100+ lines), `RelayCommand`/`AsyncRelayCommand`, `ViewModelBase`
-- **Views/** - XAML views, `CommitMessageDialog`
-- **Services/** - `GitService`, `MSBuildService`, `ConfigService`
-- **Converters/** - `BoolToVisibilityConverter`, `HasChangesToBrushConverter`, etc.
+- **ViewModels/** - `MainViewModel` (coordinator), `WelcomeViewModel`, `ToolbarViewModel`, `ProjectListViewModel`, `OutputViewModel`, `ConflictDialogViewModel`, `NewProjectDialogViewModel`. `RelayCommand`/`AsyncRelayCommand`, `ViewModelBase`
+- **Models/** - `GitProject` (core model with INotifyPropertyChanged), `BuildModels` (MSBuildVersion, BuildResult, GitSyncResult, RemoteStatusInfo, enums)
+- **Views/** - XAML views, `CommitMessageDialog`, `ProjectListView`, `OutputView`
+- **Services/** - `GitService` (scanning), `GitSyncService` (sync operations), `MSBuildService`, `ConfigService`, `ProjectService`, `FileAssociationService`, `DialogService`
+- **Converters/** - XAML converters for status visualization
 
 ## Key Services
 
-**GitService** - Scans for `.git` folders recursively, detects .NET projects (`.sln`/`.csproj`/`.vbproj`/`.fsproj`), runs `git status --porcelain` for status, performs `git add . -> git commit -> git pull` sync.
+**GitService** - Scans for `.git` folders recursively, detects .NET projects (`.sln`/`.csproj`/`.vbproj`/`.fsproj`), runs `git status --porcelain` for status.
+
+**GitSyncService** - Performs `git add . -> git commit -> git pull` sync with conflict detection and resolution strategies (stash, abort, prompt).
 
 **MSBuildService** - 5-layer MSBuild detection: vswhere.exe, registry, common path scan (C:-G: drives), .NET Framework MSBuild, `dotnet msbuild`. Runs NuGet restore then MSBuild compile.
 
-**ConfigService** - Persists `config.json` alongside the executable (in `AppDomain.CurrentDomain.BaseDirectory`). Stores per-project: MSBuild version, execute file, configuration (Release/Debug), sort order, root path.
+**ConfigService** - Persists `config.json` alongside the executable. Stores per-project: MSBuild version, execute file, configuration, sort order, root path, pull strategy, conflict action.
+
+**ProjectService** - Manages recent projects and project list persistence.
 
 ## Key Models
 
-**GitProject** - Implements `INotifyPropertyChanged` manually. Key properties: `IsSelected`, `HasChanges`, `ChangesCount`, `IsExpanded`, `IsSyncing`, `IsBuilding`, `ErrorMessage`, `CommitMessage`, `SelectedMSBuildVersion`, `ExecuteFile`, `Configuration`.
+**GitProject** - Core model with manual INotifyPropertyChanged. Key properties: `IsSelected`, `HasChanges`, `ChangesCount`, `IsExpanded`, `IsSyncing`, `IsBuilding`, `ErrorMessage`, `CommitMessage`, `SelectedMSBuildVersion`, `ExecuteFile`, `Configuration`, `PullStrategy`, `ConflictAction`, `AutoCommitWhenNoMessage`.
 
 **MSBuildVersion** - Holds `DisplayName`, `Path`, `Version`, `VisualStudioVersion`.
+
+**GitSyncResult** - Contains `Success`, `HasCommit`, `HasConflict`, `NeedsCommitMessage`, `RemoteStatus` (RemoteStatusInfo with fast-forward/merge/rebase detection).
+
+**BuildModels enums** - `PullStrategy` (Auto/Merge/Rebase/CommitOnly), `ConflictAction` (Prompt/AutoStash/Abort).
 
 ## UI Components
 

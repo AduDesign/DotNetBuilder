@@ -1,160 +1,160 @@
 <AduSkin:AduWindow
-	x:Class="DotNetBuilder.MainWindow"
-	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-	xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
-	xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
-	xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
-	xmlns:views="clr-namespace:DotNetBuilder.Views"
-	Title=".NET Project Builder"
-	Width="600"
-	Height="900"
-	MinWidth="600"
-	MinHeight="600"
-	AduAttach:HeaderAttach.Background="{DynamicResource NormalTransparentBrush}"
-	AduAttach:HeaderAttach.FontSize="14"
-	AduAttach:HeaderAttach.Foreground="{DynamicResource NormalForeground}"
-	AduAttach:HeaderAttach.Height="40"
-	AduAttach:HeaderAttach.IconWidth="20"
-	AduAttach:HeaderAttach.Margin="0,0,0,0"
-	AduAttach:HeaderAttach.Visible="Visible"
-	Icon="builder.ico"
-	WindowStartupLocation="CenterScreen">
-	<AduSkin:AduWindow.Menu>
-		<AduSkin:AduTitleMenu Margin="10,0" HorizontalAlignment="Left">
-			<AduSkin:AduTitleMenuItem HorizontalAlignment="Left" Header="文件(_F)">
-				<AduSkin:AduMenuItem
-					Command="{Binding WelcomeViewModel.NewProjectCommand}"
-					Header="新建项目(_N)"
-					InputGestureText="Ctrl+N">
-					<AduSkin:AduMenuItem.Icon>
-						<TextBlock
-							FontFamily="Segoe MDL2 Assets"
-							FontSize="12"
-							Text="&#xE710;" />
-					</AduSkin:AduMenuItem.Icon>
-				</AduSkin:AduMenuItem>
-				<AduSkin:AduMenuItem
-					Command="{Binding WelcomeViewModel.OpenProjectCommand}"
-					Header="打开项目(_O)"
-					InputGestureText="Ctrl+O">
-					<AduSkin:AduMenuItem.Icon>
-						<TextBlock
-							FontFamily="Segoe MDL2 Assets"
-							FontSize="12"
-							Text="&#xE838;" />
-					</AduSkin:AduMenuItem.Icon>
-				</AduSkin:AduMenuItem>
-				<AduSkin:AduMenuItem
-					Command="{Binding SaveProjectCommand}"
-					Header="保存项目(_S)"
-					InputGestureText="Ctrl+S">
-					<AduSkin:AduMenuItem.Icon>
-						<TextBlock
-							FontFamily="Segoe MDL2 Assets"
-							FontSize="12"
-							Text="&#xE74E;" />
-					</AduSkin:AduMenuItem.Icon>
-				</AduSkin:AduMenuItem>
-				<Separator />
-				<AduSkin:AduMenuItem
-					x:Name="RecentProjectsMenu"
-					Header="最近项目(_R)"
-					ItemsSource="{Binding WelcomeViewModel.RecentProjects}">
-					<AduSkin:AduMenuItem.ItemTemplate>
-						<DataTemplate>
-							<TextBlock Text="{Binding Name}" ToolTip="{Binding FilePath}" />
-						</DataTemplate>
-					</AduSkin:AduMenuItem.ItemTemplate>
-					<AduSkin:AduMenuItem.ItemContainerStyle>
-						<Style TargetType="MenuItem">
-							<EventSetter Event="Click" Handler="RecentProject_Click" />
-						</Style>
-					</AduSkin:AduMenuItem.ItemContainerStyle>
-				</AduSkin:AduMenuItem>
-				<Separator />
-				<AduSkin:AduMenuItem Command="{Binding CloseProjectCommand}" Header="关闭项目(_C)">
-					<AduSkin:AduMenuItem.Icon>
-						<TextBlock
-							FontFamily="Segoe MDL2 Assets"
-							FontSize="12"
-							Text="&#xE711;" />
-					</AduSkin:AduMenuItem.Icon>
-				</AduSkin:AduMenuItem>
-			</AduSkin:AduTitleMenuItem>
-			<AduSkin:AduTitleMenuItem Header="编辑(_E)">
-				<AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志" />
-			</AduSkin:AduTitleMenuItem>
-			<AduSkin:AduTitleMenuItem Header="帮助(_H)">
-				<AduSkin:AduMenuItem Command="{Binding RegisterFileAssociationCommand}" Header="注册 .bdproj 文件关联">
-					<AduSkin:AduMenuItem.ToolTip>双击 .bdproj 文件用 DotNetBuilder 打开</AduSkin:AduMenuItem.ToolTip>
-				</AduSkin:AduMenuItem>
-				<Separator />
-				<AduSkin:AduMenuItem Click="About_Click" Header="关于" />
-			</AduSkin:AduTitleMenuItem>
-		</AduSkin:AduTitleMenu>
-	</AduSkin:AduWindow.Menu>
+    x:Class="DotNetBuilder.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
+    xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
+    xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
+    xmlns:views="clr-namespace:DotNetBuilder.Views"
+    Title=".NET Project Builder"
+    Width="600"
+    Height="900"
+    MinWidth="600"
+    MinHeight="600"
+    AduAttach:HeaderAttach.Background="{DynamicResource NormalTransparentBrush}"
+    AduAttach:HeaderAttach.FontSize="14"
+    AduAttach:HeaderAttach.Foreground="{DynamicResource NormalForeground}"
+    AduAttach:HeaderAttach.Height="40"
+    AduAttach:HeaderAttach.IconWidth="20"
+    AduAttach:HeaderAttach.Margin="0,0,0,0"
+    AduAttach:HeaderAttach.Visible="Visible"
+    Icon="builder.ico"
+    WindowStartupLocation="CenterScreen">
+    <AduSkin:AduWindow.Menu>
+        <AduSkin:AduTitleMenu Margin="10,0" HorizontalAlignment="Left">
+            <AduSkin:AduTitleMenuItem HorizontalAlignment="Left" Header="文件(_F)">
+                <AduSkin:AduMenuItem
+                    Command="{Binding WelcomeViewModel.NewProjectCommand}"
+                    Header="新建项目(_N)"
+                    InputGestureText="Ctrl+N">
+                    <AduSkin:AduMenuItem.Icon>
+                        <TextBlock
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="12"
+                            Text="&#xE710;" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
+                <AduSkin:AduMenuItem
+                    Command="{Binding WelcomeViewModel.OpenProjectCommand}"
+                    Header="打开项目(_O)"
+                    InputGestureText="Ctrl+O">
+                    <AduSkin:AduMenuItem.Icon>
+                        <TextBlock
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="12"
+                            Text="&#xE838;" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
+                <AduSkin:AduMenuItem
+                    Command="{Binding SaveProjectCommand}"
+                    Header="保存项目(_S)"
+                    InputGestureText="Ctrl+S">
+                    <AduSkin:AduMenuItem.Icon>
+                        <TextBlock
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="12"
+                            Text="&#xE74E;" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
+                <Separator />
+                <AduSkin:AduMenuItem
+                    x:Name="RecentProjectsMenu"
+                    Header="最近项目(_R)"
+                    ItemsSource="{Binding WelcomeViewModel.RecentProjects}">
+                    <AduSkin:AduMenuItem.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}" ToolTip="{Binding FilePath}" />
+                        </DataTemplate>
+                    </AduSkin:AduMenuItem.ItemTemplate>
+                    <AduSkin:AduMenuItem.ItemContainerStyle>
+                        <Style BasedOn="{StaticResource AduMenuItem}" TargetType="AduSkin:AduMenuItem">
+                            <EventSetter Event="Click" Handler="RecentProject_Click" />
+                        </Style>
+                    </AduSkin:AduMenuItem.ItemContainerStyle>
+                </AduSkin:AduMenuItem>
+                <Separator />
+                <AduSkin:AduMenuItem Command="{Binding CloseProjectCommand}" Header="关闭项目(_C)">
+                    <AduSkin:AduMenuItem.Icon>
+                        <TextBlock
+                            FontFamily="Segoe MDL2 Assets"
+                            FontSize="12"
+                            Text="&#xE711;" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
+            </AduSkin:AduTitleMenuItem>
+            <AduSkin:AduTitleMenuItem Header="编辑(_E)">
+                <AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志" />
+            </AduSkin:AduTitleMenuItem>
+            <AduSkin:AduTitleMenuItem Header="帮助(_H)">
+                <AduSkin:AduMenuItem Command="{Binding RegisterFileAssociationCommand}" Header="注册 .bdproj 文件关联">
+                    <AduSkin:AduMenuItem.ToolTip>双击 .bdproj 文件用 DotNetBuilder 打开</AduSkin:AduMenuItem.ToolTip>
+                </AduSkin:AduMenuItem>
+                <Separator />
+                <AduSkin:AduMenuItem Click="About_Click" Header="关于" />
+            </AduSkin:AduTitleMenuItem>
+        </AduSkin:AduTitleMenu>
+    </AduSkin:AduWindow.Menu>
 
-	<Grid Background="{DynamicResource PanelBackground}">
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto" />
-			<RowDefinition Height="*" />
-			<RowDefinition Height="Auto" />
-			<RowDefinition
-				Height="200"
-				MinHeight="200"
-				MaxHeight="600" />
-		</Grid.RowDefinitions>
+    <Grid Background="{DynamicResource PanelBackground}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition
+                Height="200"
+                MinHeight="200"
+                MaxHeight="600" />
+        </Grid.RowDefinitions>
 
-		<!--  工具栏（项目已打开时显示）  -->
-		<views:ToolbarView Grid.Row="0" DataContext="{Binding ToolbarViewModel}" />
+        <!--  工具栏（项目已打开时显示）  -->
+        <views:ToolbarView Grid.Row="0" DataContext="{Binding ToolbarViewModel}" />
 
-		<!--  项目列表（项目已打开时显示）  -->
-		<views:ProjectListView Grid.Row="1" DataContext="{Binding ProjectListViewModel}" />
+        <!--  项目列表（项目已打开时显示）  -->
+        <views:ProjectListView Grid.Row="1" DataContext="{Binding ProjectListViewModel}" />
 
-		<AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
+        <AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
 
-		<!--  底部输出面板  -->
-		<Grid Grid.Row="3">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*" />
-				<ColumnDefinition Width="Auto" />
-			</Grid.ColumnDefinitions>
+        <!--  底部输出面板  -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-			<!--  输出日志区域  -->
-			<views:OutputView x:Name="OutputViewPanel" DataContext="{Binding OutputViewModel}" />
+            <!--  输出日志区域  -->
+            <views:OutputView x:Name="OutputViewPanel" DataContext="{Binding OutputViewModel}" />
 
-			<!--  冲突对话框  -->
-			<views:ConflictDialogView Grid.ColumnSpan="2" DataContext="{Binding ConflictViewModel}" />
-		</Grid>
+            <!--  冲突对话框  -->
+            <views:ConflictDialogView Grid.ColumnSpan="2" DataContext="{Binding ConflictViewModel}" />
+        </Grid>
 
-		<!--  欢迎页面（无项目时显示）  -->
-		<views:WelcomeView
-			Grid.RowSpan="4"
-			Background="White"
-			DataContext="{Binding WelcomeViewModel}"
-			Visibility="{Binding DataContext.HasProject, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToReVisibility}}" />
+        <!--  欢迎页面（无项目时显示）  -->
+        <views:WelcomeView
+            Grid.RowSpan="4"
+            Background="White"
+            DataContext="{Binding WelcomeViewModel}"
+            Visibility="{Binding DataContext.HasProject, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToReVisibility}}" />
 
-		<!--  新建项目对话框  -->
-		<views:NewProjectDialogView Grid.RowSpan="4" DataContext="{Binding NewProjectViewModel}" />
+        <!--  新建项目对话框  -->
+        <views:NewProjectDialogView Grid.RowSpan="4" DataContext="{Binding NewProjectViewModel}" />
 
-		<!--  加载中遮罩  -->
-		<Border
-			Grid.RowSpan="4"
-			Background="#80000000"
-			Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-				<AduSkin:AduLoading
-					Width="100"
-					Height="100"
-					IsActived="{Binding IsBusy}" />
-				<TextBlock
-					Margin="0,15,0,0"
-					HorizontalAlignment="Center"
-					FontSize="14"
-					Foreground="{DynamicResource PrimaryBrush}"
-					Text="处理中..." />
-			</StackPanel>
-		</Border>
-	</Grid>
+        <!--  加载中遮罩  -->
+        <Border
+            Grid.RowSpan="4"
+            Background="#80000000"
+            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <AduSkin:AduLoading
+                    Width="100"
+                    Height="100"
+                    IsActived="{Binding IsBusy}" />
+                <TextBlock
+                    Margin="0,15,0,0"
+                    HorizontalAlignment="Center"
+                    FontSize="14"
+                    Foreground="{DynamicResource PrimaryBrush}"
+                    Text="处理中..." />
+            </StackPanel>
+        </Border>
+    </Grid>
 </AduSkin:AduWindow>

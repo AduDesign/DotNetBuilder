@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="AduSkin">
       <HintPath>..\ThirdParty\AduSkin.dll</HintPath>
     </Reference>

@@ -1,94 +1,73 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input; 
 
 namespace DotNetBuilder.ViewModels
 {
+    /// <summary>
+    /// 新建项目对话框 ViewModel - 使用 CommunityToolkit.Mvvm
+    /// </summary>
+    public partial class NewProjectDialogViewModel : ObservableObject
+    {
+        private Action<string, string>? _onConfirmCallback;
 
-	/// <summary>
-	/// 新建项目对话框 ViewModel
-	/// </summary>
-	public class NewProjectDialogViewModel : ViewModelBase
-	{
-		private string _newProjectName = "新项目";
-		private string _newProjectRootPath = string.Empty;
-		private bool _showDialog;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanConfirm))]
+        private string _newProjectName = "新项目";
 
-		public NewProjectDialogViewModel()
-		{
-			BrowseCommand = new RelayCommand(_ => Browse());
-			ConfirmCommand = new RelayCommand(_ => Confirm());
-			CancelCommand = new RelayCommand(_ => Cancel());
-		}
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanConfirm))]
+        private string _newProjectRootPath = string.Empty;
 
-		public event Action? OnConfirm;
-		public event Action? OnCancel;
+        [ObservableProperty]
+        private bool _showDialog;
 
-		public string NewProjectName
-		{
-			get => _newProjectName;
-			set => SetProperty(ref _newProjectName, value);
-		}
+        public bool CanConfirm => !string.IsNullOrWhiteSpace(NewProjectName) &&
+                                  !string.IsNullOrWhiteSpace(NewProjectRootPath);
+         
 
-		public string NewProjectRootPath
-		{
-			get => _newProjectRootPath;
-			set
-			{
-				if (SetProperty(ref _newProjectRootPath, value))
-				{
-					OnPropertyChanged(nameof(CanConfirm));
-				}
-			}
-		}
+        public NewProjectDialogViewModel()
+        {
+        }
 
-		public bool ShowDialog
-		{
-			get => _showDialog;
-			set => SetProperty(ref _showDialog, value);
-		}
+        [RelayCommand]
+        private void Browse()
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog
+            {
+                Title = "选择包含 Git 项目的根目录"
+            };
 
-		public bool CanConfirm => !string.IsNullOrWhiteSpace(NewProjectName) &&
-								  !string.IsNullOrWhiteSpace(NewProjectRootPath);
+            if (dialog.ShowDialog() == true)
+                NewProjectRootPath = dialog.FolderName;
+        } 
+        [RelayCommand]
+        private void Confirm()
+        {
+            ShowDialog = false;
+            _onConfirmCallback?.Invoke(NewProjectName, NewProjectRootPath);
+        }
 
-		public ICommand BrowseCommand { get; }
-		public ICommand ConfirmCommand { get; }
-		public ICommand CancelCommand { get; }
+        [RelayCommand]
+        private void Cancel()
+        {
+            ShowDialog = false;
+            NewProjectName = "新项目";
+            NewProjectRootPath = string.Empty;
+        }
 
-		public void Show()
-		{
-			NewProjectName = "新项目";
-			NewProjectRootPath = string.Empty;
-			ShowDialog = true;
-		}
+        /// <summary>
+        /// 设置确认回调
+        /// </summary>
+        public void SetOnConfirmCallback(Action<string, string> callback)
+        {
+            _onConfirmCallback = callback;
+        }
 
-		public void Confirm()
-		{
-			if (!CanConfirm) return;
-			ShowDialog = false;
-			OnConfirm?.Invoke();
-		}
-
-		public void Cancel()
-		{
-			ShowDialog = false;
-			NewProjectName = "新项目";
-			NewProjectRootPath = string.Empty;
-			OnCancel?.Invoke();
-		}
-
-		private void Browse()
-		{
-			var dialog = new Microsoft.Win32.OpenFolderDialog
-			{
-				Title = "选择包含 Git 项目的根目录"
-			};
-
-			if (dialog.ShowDialog() == true)
-			{
-				NewProjectRootPath = dialog.FolderName;
-			}
-		}
-	}
+        public void Show()
+        {
+            NewProjectName = "新项目";
+            NewProjectRootPath = string.Empty;
+            ShowDialog = true;
+        }
+    }
 }

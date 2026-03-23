@@ -89,6 +89,12 @@ namespace DotNetBuilder.Services
             project.FilePath = filePath;
             project.ModifiedAt = DateTime.Now;
 
+            // 更新当前项目的 FilePath
+            if (_currentProject != null && _currentProject.Name == project.Name)
+            {
+                _currentProject.FilePath = filePath;
+            }
+
             var json = JsonSerializer.Serialize(project, _jsonOptions);
             await File.WriteAllTextAsync(filePath, json);
         }

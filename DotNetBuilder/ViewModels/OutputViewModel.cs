@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
@@ -18,25 +19,42 @@ namespace DotNetBuilder.ViewModels
     }
 
     /// <summary>
-    /// 输出面板 ViewModel
+    /// 输出面板 ViewModel - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class OutputViewModel : ViewModelBase
+    public partial class OutputViewModel : ObservableObject
     {
+        [ObservableProperty]
         private string _logOutput = string.Empty;
+
+        [ObservableProperty]
         private bool _showErrorLog = true;
+
+        [ObservableProperty]
         private bool _showWarningLog = true;
+
+        [ObservableProperty]
         private bool _showMessageLog = true;
+
+        [ObservableProperty]
         private bool _showGitLog = true;
+
+        [ObservableProperty]
         private bool _showBuildLog = false;
 
+        [ObservableProperty]
         private PullStrategy _globalPullStrategy = PullStrategy.Auto;
+
+        [ObservableProperty]
         private ConflictAction _globalConflictAction = ConflictAction.Prompt;
+
+        [ObservableProperty]
         private bool _globalAutoCommitWhenNoMessage = false;
+
+        public ObservableCollection<PullStrategy> PullStrategies { get; }
+        public ObservableCollection<ConflictAction> ConflictActions { get; }
 
         public OutputViewModel()
         {
-            ClearLogCommand = new RelayCommand(_ => LogOutput = string.Empty);
-
             PullStrategies = new ObservableCollection<PullStrategy>
             {
                 PullStrategy.Auto,
@@ -53,64 +71,11 @@ namespace DotNetBuilder.ViewModels
             };
         }
 
-        public ObservableCollection<PullStrategy> PullStrategies { get; }
-        public ObservableCollection<ConflictAction> ConflictActions { get; }
-
-        public string LogOutput
+        [RelayCommand]
+        private void ClearLog()
         {
-            get => _logOutput;
-            set => SetProperty(ref _logOutput, value);
+            LogOutput = string.Empty;
         }
-
-        public bool ShowErrorLog
-        {
-            get => _showErrorLog;
-            set => SetProperty(ref _showErrorLog, value);
-        }
-
-        public bool ShowWarningLog
-        {
-            get => _showWarningLog;
-            set => SetProperty(ref _showWarningLog, value);
-        }
-
-        public bool ShowMessageLog
-        {
-            get => _showMessageLog;
-            set => SetProperty(ref _showMessageLog, value);
-        }
-
-        public bool ShowGitLog
-        {
-            get => _showGitLog;
-            set => SetProperty(ref _showGitLog, value);
-        }
-
-        public bool ShowBuildLog
-        {
-            get => _showBuildLog;
-            set => SetProperty(ref _showBuildLog, value);
-        }
-
-        public PullStrategy GlobalPullStrategy
-        {
-            get => _globalPullStrategy;
-            set => SetProperty(ref _globalPullStrategy, value);
-        }
-
-        public ConflictAction GlobalConflictAction
-        {
-            get => _globalConflictAction;
-            set => SetProperty(ref _globalConflictAction, value);
-        }
-
-        public bool GlobalAutoCommitWhenNoMessage
-        {
-            get => _globalAutoCommitWhenNoMessage;
-            set => SetProperty(ref _globalAutoCommitWhenNoMessage, value);
-        }
-
-        public ICommand ClearLogCommand { get; }
 
         public SyncOptions GetSyncOptions() => new()
         {

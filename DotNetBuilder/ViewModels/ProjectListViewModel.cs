@@ -1,22 +1,39 @@
 using System.Collections.ObjectModel;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 
 namespace DotNetBuilder.ViewModels
 {
     /// <summary>
-    /// 项目列表 ViewModel
+    /// 项目列表 ViewModel - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class ProjectListViewModel : ViewModelBase
+    public partial class ProjectListViewModel : ObservableObject
     {
         private readonly GitService _gitService;
         private readonly MSBuildService _msbuildService;
         private readonly OutputViewModel _outputViewModel;
         private readonly Action<string> _appendLog;
+
+        [ObservableProperty]
         private GitProject? _selectedItem;
+
+        [ObservableProperty]
         private GitProject? _selectedProject;
+
+        [ObservableProperty]
         private bool _isEnabled = true;
+
+        [ObservableProperty]
+        private bool? _isSelectedAll;
+
+        public ObservableCollection<GitProject> Projects { get; } = new();
+        public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
+        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Release", "Debug" };
+        public ObservableCollection<string> Executables { get; } = new();
+
+        public IEnumerable<GitProject> SelectedProjects => Projects.Where(p => p.IsSelected);
 
         public ProjectListViewModel(
             GitService gitService,
@@ -28,83 +45,212 @@ namespace DotNetBuilder.ViewModels
             _msbuildService = msbuildService;
             _outputViewModel = outputViewModel;
             _appendLog = appendLog;
-
-            MoveUpCommand = new RelayCommand(MoveUp, CanMoveUp);
-            MoveDownCommand = new RelayCommand(MoveDown, CanMoveDown);
-            RemoveProjectCommand = new RelayCommand(RemoveProject);
-            OpenFolderCommand = new RelayCommand(OpenFolder);
-            OpenVSCommand = new RelayCommand(OpenVS);
-            OpenVSCodeCommand = new RelayCommand(OpenVSCode);
-            BuildSingleCommand = new AsyncRelayCommand(BuildSingleAsync);
-            RunSelectedCommand = new AsyncRelayCommand(RunSelectedAsync);
         }
 
-        public ObservableCollection<GitProject> Projects { get; } = new();
-        public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
-        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Release", "Debug" };
-        public ObservableCollection<string> Executables { get; } = new();
-
-        public GitProject? SelectedItem
+        partial void OnSelectedProjectChanged(GitProject? value)
         {
-            get => _selectedItem;
-            set => SetProperty(ref _selectedItem, value);
+            LoadProjectExecutables();
         }
 
-        public GitProject? SelectedProject
+        partial void OnIsSelectedAllChanged(bool? value)
         {
-            get => _selectedProject;
-            set
+            if (value == null) return;
+
+            foreach (var item in Projects)
             {
-                if (SetProperty(ref _selectedProject, value))
-                {
-                    LoadProjectExecutables();
-                }
+                item.SetIsSelected(value.Value);
             }
         }
 
-        public bool IsEnabled
+        [RelayCommand]
+        private void MoveUp(GitProject? project)
         {
-            get => _isEnabled;
-            set => SetProperty(ref _isEnabled, value);
+            if (project == null) return;
+
+            var index = Projects.IndexOf(project);
+            if (index > 0)
+            {
+                Projects.Move(index, index - 1);
+                UpdateSortOrders();
+            }
         }
 
-        public bool? IsSelectedAll
+        [RelayCommand]
+        private void MoveDown(GitProject? project)
         {
-            get
+            if (project == null) return;
+
+            var index = Projects.IndexOf(project);
+            if (index < Projects.Count - 1)
             {
-                if (Projects.Count(s => s.IsSelected) == Projects.Count)
-                    return true;
-                else if (Projects.Any(s => s.IsSelected))
-                    return null;
+                Projects.Move(index, index + 1);
+                UpdateSortOrders();
+            }
+        }
+
+        [RelayCommand]
+        private void RemoveProject(GitProject? project)
+        {
+            if (project == null) return;
+
+            project.IsSelected = false;
+            project.IsRemoved = true;
+            Projects.Remove(project);
+            _appendLog($"已移除项目: {project.Name}\n");
+
+            if (SelectedProject == project)
+                SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
+        }
+
+        [RelayCommand]
+        private void OpenFolder(GitProject? project)
+        {
+            if (project == null) return;
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{project.Path}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"打开文件夹失败: {ex.Message}\n");
+            }
+        }
+
+        [RelayCommand]
+        private void OpenVS(GitProject? project)
+        {
+            if (project == null) return;
+
+            try
+            {
+                var targetPath = !string.IsNullOrEmpty(project.SolutionPath)
+                    ? project.SolutionPath
+                    : project.ProjectFilePath;
+
+                if (string.IsNullOrEmpty(targetPath))
+                {
+                    _appendLog($"[{project.Name}] 未找到解决方案或项目文件\n");
+                    return;
+                }
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "devenv.exe",
+                    Arguments = $"\"{targetPath}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"用 VisualStudio 打开失败: {ex.Message}\n");
+            }
+        }
+
+        [RelayCommand]
+        private void OpenVSCode(GitProject? project)
+        {
+            if (project == null) return;
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "code",
+                    Arguments = $"\"{project.Path}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"用 VSCode 打开失败: {ex.Message}\n");
+            }
+        }
+
+        [RelayCommand]
+        private async Task BuildSingleAsync(GitProject? project)
+        {
+            if (project == null) return;
+
+            if (project.SelectedMSBuildVersion == null)
+            {
+                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
+                return;
+            }
+
+            _outputViewModel.LogOutput = string.Empty;
+            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsBuilding = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
+                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
+
+                if (result.Success)
+                {
+                    project.IsExpanded = false;
+                    _appendLog($"[{project.Name}] 构建成功\n");
+                }
                 else
-                    return false;
-            }
-            set
-            {
-                bool? oldValue = IsSelectedAll;
-                foreach (var item in Projects)
                 {
-                    if (oldValue == true)
-                        item.SetIsSelected(false);
-                    else if (oldValue == false)
-                        item.SetIsSelected(true);
-                    else if (oldValue == null)
-                        item.SetIsSelected(true);
+                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
                 }
-                OnPropertyChanged();
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsBuilding = false;
             }
         }
 
-        public IEnumerable<GitProject> SelectedProjects => Projects.Where(p => p.IsSelected);
+        [RelayCommand]
+        private async Task RunSelectedAsync(GitProject? project)
+        {
+            GitProject? targetProject = project ?? SelectedItem;
+            if (targetProject == null || string.IsNullOrEmpty(targetProject.ExecuteFile))
+            {
+                _appendLog("无可运行的项目\n");
+                return;
+            }
 
-        public ICommand MoveUpCommand { get; }
-        public ICommand MoveDownCommand { get; }
-        public ICommand RemoveProjectCommand { get; }
-        public ICommand OpenFolderCommand { get; }
-        public ICommand OpenVSCommand { get; }
-        public ICommand OpenVSCodeCommand { get; }
-        public ICommand BuildSingleCommand { get; }
-        public ICommand RunSelectedCommand { get; }
+            _appendLog($"\n========== 运行项目: {targetProject.Name} ==========\n");
+
+            try
+            {
+                var exePath = targetProject.ExecuteFile;
+                var workingDir = System.IO.Path.GetDirectoryName(exePath) ?? targetProject.Path;
+
+                _appendLog($"[{targetProject.Name}] 启动: {exePath}\n");
+
+                var processStartInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = exePath,
+                    WorkingDirectory = workingDir,
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(processStartInfo);
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{targetProject.Name}] 运行失败: {ex.Message}\n");
+            }
+        }
 
         public void LoadMSBuildVersions(IEnumerable<MSBuildVersion> versions)
         {
@@ -120,16 +266,54 @@ namespace DotNetBuilder.ViewModels
             project.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(GitProject.IsSelected))
-                    OnPropertyChanged(nameof(IsSelectedAll));
+                    UpdateIsSelectedAll();
             };
             Projects.Add(project);
-            OnPropertyChanged(nameof(IsSelectedAll));
+            UpdateIsSelectedAll();
         }
 
         public void ClearProjects()
         {
             Projects.Clear();
-            OnPropertyChanged(nameof(IsSelectedAll));
+            UpdateIsSelectedAll();
+        }
+
+        private void UpdateIsSelectedAll()
+        {
+            if (Projects.Count == 0)
+            {
+                IsSelectedAll = false;
+                return;
+            }
+
+            var selectedCount = Projects.Count(p => p.IsSelected);
+            if (selectedCount == Projects.Count)
+                IsSelectedAll = true;
+            else if (selectedCount > 0)
+                IsSelectedAll = null;
+            else
+                IsSelectedAll = false;
+        }
+
+        private void UpdateSortOrders()
+        {
+            for (int i = 0; i < Projects.Count; i++)
+            {
+                Projects[i].SortOrder = i;
+            }
+        }
+
+        private void LoadProjectExecutables()
+        {
+            Executables.Clear();
+
+            if (SelectedProject == null) return;
+
+            var exeFiles = _msbuildService.FindOutputExecutables(SelectedProject.Path);
+            foreach (var exe in exeFiles)
+            {
+                Executables.Add(exe);
+            }
         }
 
         public async Task ScanProjectsAsync(string path)
@@ -187,228 +371,65 @@ namespace DotNetBuilder.ViewModels
             _appendLog($"已添加项目: {project.Name}\n");
         }
 
-        private void MoveUp(object? parameter)
+        /// <summary>
+        /// 加载保存的项目配置（不重新扫描目录）
+        /// </summary>
+        public async Task LoadSavedProjectsAsync(IEnumerable<Models.ProjectConfig> savedProjects)
         {
-            if (parameter is GitProject project)
+            _appendLog("正在加载保存的项目配置...\n");
+
+            var msbuildVersionsList = MSBuildVersions.ToList();
+
+            foreach (var config in savedProjects)
             {
-                var index = Projects.IndexOf(project);
-                if (index > 0)
+                // 检查路径是否存在
+                if (!System.IO.Directory.Exists(config.Path))
                 {
-                    Projects.Move(index, index - 1);
-                    UpdateSortOrders();
-                }
-            }
-        }
-
-        private bool CanMoveUp(object? parameter)
-        {
-            if (parameter is GitProject project)
-            {
-                return Projects.IndexOf(project) > 0;
-            }
-            return false;
-        }
-
-        private void MoveDown(object? parameter)
-        {
-            if (parameter is GitProject project)
-            {
-                var index = Projects.IndexOf(project);
-                if (index < Projects.Count - 1)
-                {
-                    Projects.Move(index, index + 1);
-                    UpdateSortOrders();
-                }
-            }
-        }
-
-        private bool CanMoveDown(object? parameter)
-        {
-            if (parameter is GitProject project)
-            {
-                return Projects.IndexOf(project) < Projects.Count - 1;
-            }
-            return false;
-        }
-
-        private void UpdateSortOrders()
-        {
-            for (int i = 0; i < Projects.Count; i++)
-            {
-                Projects[i].SortOrder = i;
-            }
-        }
-
-        private void RemoveProject(object? parameter)
-        {
-            if (parameter is GitProject project)
-            {
-                project.IsSelected = false;
-                project.IsRemoved = true;
-                Projects.Remove(project);
-                _appendLog($"已移除项目: {project.Name}\n");
-
-                if (SelectedProject == project)
-                    SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
-            }
-        }
-
-        private void OpenFolder(object? parameter)
-        {
-            if (parameter is not GitProject project) return;
-
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = $"\"{project.Path}\"",
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                _appendLog($"打开文件夹失败: {ex.Message}\n");
-            }
-        }
-
-        private void OpenVS(object? parameter)
-        {
-            if (parameter is not GitProject project) return;
-
-            try
-            {
-                var targetPath = !string.IsNullOrEmpty(project.SolutionPath)
-                    ? project.SolutionPath
-                    : project.ProjectFilePath;
-
-                if (string.IsNullOrEmpty(targetPath))
-                {
-                    _appendLog($"[{project.Name}] 未找到解决方案或项目文件\n");
-                    return;
+                    _appendLog($"路径不存在，跳过: {config.Path}\n");
+                    continue;
                 }
 
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                // 创建 GitProject
+                var project = await _gitService.AddGitProjectAsync(config.Path, null);
+                if (project == null)
                 {
-                    FileName = "devenv.exe",
-                    Arguments = $"\"{targetPath}\"",
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                _appendLog($"用 VisualStudio 打开失败: {ex.Message}\n");
-            }
-        }
-
-        private void OpenVSCode(object? parameter)
-        {
-            if (parameter is not GitProject project) return;
-
-            try
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "code",
-                    Arguments = $"\"{project.Path}\"",
-                    UseShellExecute = true
-                });
-            }
-            catch (Exception ex)
-            {
-                _appendLog($"用 VSCode 打开失败: {ex.Message}\n");
-            }
-        }
-
-        private void LoadProjectExecutables()
-        {
-            Executables.Clear();
-
-            if (SelectedProject == null) return;
-
-            var exeFiles = _msbuildService.FindOutputExecutables(SelectedProject.Path);
-            foreach (var exe in exeFiles)
-            {
-                Executables.Add(exe);
-            }
-        }
-
-        private async Task BuildSingleAsync(object? parameter)
-        {
-            if (parameter is not GitProject project) return;
-
-            if (project.SelectedMSBuildVersion == null)
-            {
-                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
-                return;
-            }
-
-            _outputViewModel.LogOutput = string.Empty;
-            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
-
-            try
-            {
-                project.ClearError();
-                project.IsBuilding = true;
-                project.IsExpanded = true;
-
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
-                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
-
-                if (result.Success)
-                {
-                    project.IsExpanded = false;
-                    _appendLog($"[{project.Name}] 构建成功\n");
+                    _appendLog($"非Git项目目录，跳过: {config.Path}\n");
+                    continue;
                 }
-                else
+
+                // 恢复保存的配置
+                project.SolutionPath = _gitService.GetSolutionPath(project.Path);
+                project.ProjectFilePath = _gitService.GetProjectFilePath(project.Path);
+                project.SortOrder = config.Order;
+                project.Configuration = config.Configuration;
+                project.ExecuteFile = config.ExecuteFile ?? string.Empty;
+                project.PullStrategy = config.PullStrategy;
+                project.ConflictAction = config.ConflictAction;
+                project.AutoCommitWhenNoMessage = config.AutoCommitWhenNoMessage;
+                project.SetIsSelected(config.IsSelected);
+
+                // 恢复 MSBuild 版本
+                if (!string.IsNullOrEmpty(config.SelectedMSBuildVersion))
                 {
-                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
-                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                    var msbuild = msbuildVersionsList.FirstOrDefault(v => v.DisplayName == config.SelectedMSBuildVersion);
+                    if (msbuild != null)
+                    {
+                        project.SelectedMSBuildVersion = msbuild;
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
-                project.ErrorMessage = ex.Message;
-            }
-            finally
-            {
-                project.IsBuilding = false;
-            }
-        }
-
-        private async Task RunSelectedAsync(object? parameter)
-        {
-            GitProject? project = parameter as GitProject ?? SelectedItem;
-            if (project == null || string.IsNullOrEmpty(project.ExecuteFile))
-            {
-                _appendLog("无可运行的项目\n");
-                return;
-            }
-
-            _appendLog($"\n========== 运行项目: {project.Name} ==========\n");
-
-            try
-            {
-                var exePath = project.ExecuteFile;
-                var workingDir = System.IO.Path.GetDirectoryName(exePath) ?? project.Path;
-
-                _appendLog($"[{project.Name}] 启动: {exePath}\n");
-
-                var processStartInfo = new System.Diagnostics.ProcessStartInfo
+                else if (msbuildVersionsList.Count > 0)
                 {
-                    FileName = exePath,
-                    WorkingDirectory = workingDir,
-                    UseShellExecute = true
-                };
+                    project.SelectedMSBuildVersion = msbuildVersionsList[0];
+                }
 
-                System.Diagnostics.Process.Start(processStartInfo);
+                // 更新 Git 状态
+                await _gitService.UpdateProjectStatusAsync(project);
+
+                AddProject(project);
             }
-            catch (Exception ex)
-            {
-                _appendLog($"[{project.Name}] 运行失败: {ex.Message}\n");
-            }
+
+            SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
+            _appendLog($"已加载 {Projects.Count} 个项目\n");
         }
     }
 }

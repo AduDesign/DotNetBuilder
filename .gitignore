@@ -9,3 +9,4 @@
 /.idea/.idea.DotNetBuilder/.idea
 /DotNetBuilder/nul
 /nul
+/DotNetBuilder/bin/Release/net10.0-windows

@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Windows;
-using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using AduSkin.Controls;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
@@ -9,84 +9,31 @@ using DotNetBuilder.Services;
 namespace DotNetBuilder.ViewModels
 {
     /// <summary>
-    /// 项目视图模型 - 负责项目管理相关的 UI 状态和命令
+    /// 项目视图模型 - 使用 CommunityToolkit.Mvvm
     /// </summary>
-    public class ProjectViewModel : ViewModelBase
+    public partial class ProjectViewModel : ObservableObject
     {
         private readonly ProjectService _projectService;
         private readonly Action<string> _appendLog;
 
+        [ObservableProperty]
         private ProjectInfo? _currentProject;
+
+        [ObservableProperty]
         private string _projectName = "未命名项目";
+
+        [ObservableProperty]
         private bool _hasUnsavedChanges;
+
+        [ObservableProperty]
         private bool _showNewProjectDialog;
+
+        [ObservableProperty]
         private bool _showRecentProjectsMenu;
 
-        /// <summary>
-        /// 对话框显示回调
-        /// </summary>
-        public event Action? OnShowNewProjectDialogRequested;
-
-        public ProjectViewModel(ProjectService projectService, Action<string> appendLog)
-        {
-            _projectService = projectService;
-            _appendLog = appendLog;
-
-            // 命令
-            NewProjectCommand = new RelayCommand(OnShowNewProjectDialog);
-            OpenProjectCommand = new AsyncRelayCommand(OpenProjectAsync);
-            SaveProjectCommand = new AsyncRelayCommand(SaveProjectAsync, () => HasProject && HasUnsavedChanges);
-            SaveProjectAsCommand = new AsyncRelayCommand(SaveProjectAsAsync);
-            CloseProjectCommand = new RelayCommand(CloseProject, () => HasProject);
-
-            // 初始化
-            _ = LoadRecentProjectsAsync();
-        }
-
-        #region 属性
-
-        public ProjectInfo? CurrentProject
-        {
-            get => _currentProject;
-            set
-            {
-                if (SetProperty(ref _currentProject, value))
-                {
-                    OnPropertyChanged(nameof(HasProject));
-                    OnPropertyChanged(nameof(ProjectDisplayName));
-                }
-            }
-        }
-
-        public string ProjectName
-        {
-            get => _projectName;
-            set
-            {
-                if (SetProperty(ref _projectName, value))
-                {
-                    if (CurrentProject != null)
-                    {
-                        CurrentProject.Name = value;
-                        HasUnsavedChanges = true;
-                    }
-                }
-            }
-        }
+        public ObservableCollection<RecentProject> RecentProjects { get; } = new();
 
         public bool HasProject => CurrentProject != null;
-
-        public bool HasUnsavedChanges
-        {
-            get => _hasUnsavedChanges;
-            internal set
-            {
-                if (SetProperty(ref _hasUnsavedChanges, value))
-                {
-                    OnPropertyChanged(nameof(ProjectDisplayName));
-                }
-            }
-        }
 
         public string ProjectDisplayName
         {
@@ -99,54 +46,47 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        public bool ShowNewProjectDialog
+        /// <summary>
+        /// 对话框显示回调
+        /// </summary>
+        public event Action? OnShowNewProjectDialogRequested;
+
+        public ProjectViewModel(ProjectService projectService, Action<string> appendLog)
         {
-            get => _showNewProjectDialog;
-            set => SetProperty(ref _showNewProjectDialog, value);
+            _projectService = projectService;
+            _appendLog = appendLog;
+
+            _ = LoadRecentProjectsAsync();
         }
 
-        public bool ShowRecentProjectsMenu
+        partial void OnCurrentProjectChanged(ProjectInfo? value)
         {
-            get => _showRecentProjectsMenu;
-            set => SetProperty(ref _showRecentProjectsMenu, value);
+            OnPropertyChanged(nameof(HasProject));
+            OnPropertyChanged(nameof(ProjectDisplayName));
         }
 
-        public ObservableCollection<RecentProject> RecentProjects { get; } = new();
+        partial void OnHasUnsavedChangesChanged(bool value)
+        {
+            OnPropertyChanged(nameof(ProjectDisplayName));
+        }
 
-        #endregion
+        partial void OnProjectNameChanged(string value)
+        {
+            if (CurrentProject != null)
+            {
+                CurrentProject.Name = value;
+                HasUnsavedChanges = true;
+            }
+        }
 
-        #region 命令
-
-        public ICommand NewProjectCommand { get; }
-        public ICommand OpenProjectCommand { get; }
-        public ICommand SaveProjectCommand { get; }
-        public ICommand SaveProjectAsCommand { get; }
-        public ICommand CloseProjectCommand { get; }
-
-        #endregion
-
-        #region 方法
-
-        private void OnShowNewProjectDialog()
+        [RelayCommand]
+        private void NewProject()
         {
             OnShowNewProjectDialogRequested?.Invoke();
             ShowNewProjectDialog = true;
         }
 
-        /// <summary>
-        /// 创建新项目
-        /// </summary>
-        public void CreateNewProject(string name, string rootPath)
-        {
-            CurrentProject = _projectService.CreateProject(name, rootPath);
-            ProjectName = name;
-            HasUnsavedChanges = true;
-            ShowNewProjectDialog = false;
-
-            _appendLog($"已创建新项目: {name}\n");
-            _appendLog($"根目录: {rootPath}\n");
-        }
-
+        [RelayCommand]
         private async Task OpenProjectAsync()
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
@@ -160,6 +100,66 @@ namespace DotNetBuilder.ViewModels
             {
                 await LoadProjectAsync(dialog.FileName);
             }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanSaveProject))]
+        private async Task SaveProjectAsync()
+        {
+            if (CurrentProject == null)
+                return;
+
+            if (string.IsNullOrEmpty(CurrentProject.FilePath))
+            {
+                await SaveProjectAsAsync();
+                return;
+            }
+
+            await DoSaveProjectAsync(CurrentProject.FilePath);
+        }
+        private bool CanSaveProject() => HasProject && HasUnsavedChanges;
+
+        [RelayCommand]
+        private async Task SaveProjectAsAsync()
+        {
+            if (CurrentProject == null)
+                return;
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "保存项目",
+                Filter = _projectService.GetProjectFileFilter(),
+                DefaultExt = ".bdproj",
+                FileName = CurrentProject.Name
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                await DoSaveProjectAsync(dialog.FileName);
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanCloseProject))]
+        private void CloseProject()
+        {
+            CurrentProject = null;
+            ProjectName = "未命名项目";
+            HasUnsavedChanges = false;
+            _appendLog("已关闭项目\n");
+        }
+        private bool CanCloseProject() => HasProject;
+
+        /// <summary>
+        /// 创建新项目
+        /// </summary>
+        public void CreateNewProject(string name, string rootPath)
+        {
+            CurrentProject = _projectService.CreateProject(name, rootPath);
+            ProjectName = name;
+            HasUnsavedChanges = true;
+            ShowNewProjectDialog = false;
+
+            _appendLog($"已创建新项目: {name}\n");
+            _appendLog($"根目录: {rootPath}\n");
         }
 
         public async Task LoadProjectAsync(string filePath)
@@ -211,39 +211,6 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        private async Task SaveProjectAsync()
-        {
-            if (CurrentProject == null)
-                return;
-
-            if (string.IsNullOrEmpty(CurrentProject.FilePath))
-            {
-                await SaveProjectAsAsync();
-                return;
-            }
-
-            await DoSaveProjectAsync(CurrentProject.FilePath);
-        }
-
-        private async Task SaveProjectAsAsync()
-        {
-            if (CurrentProject == null)
-                return;
-
-            var dialog = new Microsoft.Win32.SaveFileDialog
-            {
-                Title = "保存项目",
-                Filter = _projectService.GetProjectFileFilter(),
-                DefaultExt = ".bdproj",
-                FileName = CurrentProject.Name
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                await DoSaveProjectAsync(dialog.FileName);
-            }
-        }
-
         private async Task DoSaveProjectAsync(string filePath)
         {
             if (CurrentProject == null)
@@ -267,32 +234,6 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        private void CloseProject()
-        {
-            if (HasProject && HasUnsavedChanges)
-            {
-                var result = AduMessageBox.Show(
-                    "当前项目有未保存的更改，是否保存？",
-                    "提示",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    _ = SaveProjectAsync();
-                }
-                else if (result == MessageBoxResult.Cancel)
-                {
-                    return;
-                }
-            }
-
-            CurrentProject = null;
-            ProjectName = "未命名项目";
-            HasUnsavedChanges = false;
-            _appendLog("已关闭项目\n");
-        }
-
         private async Task LoadRecentProjectsAsync()
         {
             var recent = await _projectService.GetRecentProjectsAsync();
@@ -311,7 +252,5 @@ namespace DotNetBuilder.ViewModels
                 await LoadProjectAsync(projectPath);
             }
         }
-
-        #endregion
     }
 }
