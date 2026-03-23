@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Xml.Linq;
 using DotNetBuilder.Models;
 
 namespace DotNetBuilder.Services
@@ -307,6 +308,75 @@ namespace DotNetBuilder.Services
             return csprojFiles.FirstOrDefault() ??
                    Directory.GetFiles(projectPath, "*.vbproj", SearchOption.AllDirectories).FirstOrDefault() ??
                    Directory.GetFiles(projectPath, "*.fsproj", SearchOption.AllDirectories).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 解析项目文件，获取目标框架信息
+        /// </summary>
+        public ProjectFileInfo? ParseProjectFile(string projectPath)
+        {
+            var info = new ProjectFileInfo();
+
+            // 解析 .csproj / .vbproj / .fsproj 文件
+            var csproj = GetProjectFilePath(projectPath);
+            if (csproj != null && File.Exists(csproj))
+            {
+                info.FilePath = csproj;
+                try
+                {
+                    var doc = XDocument.Load(csproj);
+                    var ns = doc.Root?.GetDefaultNamespace() ?? XNamespace.None;
+
+                    // TargetFramework（.NET 5+/Core，如 net8.0, net9.0-windows）
+                    info.TargetFramework = doc.Descendants(ns + "TargetFramework")
+                        .FirstOrDefault()?.Value
+                        ?? doc.Descendants("TargetFramework").FirstOrDefault()?.Value;
+
+                    // TargetFrameworkVersion（.NET Framework，如 v4.7.2）
+                    info.TargetFrameworkVersion = doc.Descendants(ns + "TargetFrameworkVersion")
+                        .FirstOrDefault()?.Value
+                        ?? doc.Descendants("TargetFrameworkVersion").FirstOrDefault()?.Value;
+
+                    // 支持多目标框架，取第一个
+                    var tfw = doc.Descendants(ns + "TargetFrameworks").FirstOrDefault()?.Value
+                        ?? doc.Descendants("TargetFrameworks").FirstOrDefault()?.Value;
+                    if (!string.IsNullOrEmpty(tfw) && string.IsNullOrEmpty(info.TargetFramework))
+                    {
+                        info.TargetFramework = tfw.Split(';').FirstOrDefault()?.Trim();
+                    }
+                }
+                catch { }
+            }
+
+            // 解析 .sln 文件中的解决方案格式版本
+            var slnPath = GetSolutionPath(projectPath);
+            if (slnPath != null && File.Exists(slnPath))
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(slnPath);
+                    foreach (var line in lines)
+                    {
+                        // 如 "# Visual Studio Version 17"
+                        var match = System.Text.RegularExpressions.Regex.Match(line, @"#\s*Visual\s+Studio\s+Version\s+(\d+)");
+                        if (match.Success)
+                        {
+                            var majorVersion = match.Groups[1].Value;
+                            info.SolutionFormatVersion = $"v{majorVersion}.0";
+                            break;
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // 如果没有任何解析结果，返回 null
+            if (string.IsNullOrEmpty(info.TargetFramework) &&
+                string.IsNullOrEmpty(info.TargetFrameworkVersion) &&
+                string.IsNullOrEmpty(info.SolutionFormatVersion))
+                return null;
+
+            return info;
         }
 
         /// <summary>

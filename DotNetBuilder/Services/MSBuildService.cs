@@ -56,6 +56,144 @@ namespace DotNetBuilder.Services
         }
 
         /// <summary>
+        /// MSBuild 主版本探测表：key=匹配模式，value=主版本号
+        /// Pattern 按优先级从高到低排列，先匹配优先
+        /// </summary>
+        private static readonly List<(IList<string> PathPatterns, int Major)> _msbuildVersionPatterns = new()
+        {
+            (new[] { @"msbuild\18.0", "2026" },     18),
+            (new[] { @"msbuild\17.0", "2022" },     17),
+            (new[] { @"msbuild\16.0", "2019" },     16),
+            (new[] { @"msbuild\15.0", "2017" },     15),
+            (new[] { @"msbuild\14.0", "net framework" }, 14),
+        };
+
+        /// <summary>
+        /// 单条评分规则
+        /// </summary>
+        /// <param name="Condition">项目特征是否满足此规则：参数=(targetNetMajor, solutionMajor, msbuildMajor)</param>
+        /// <param name="Usable">此 MSBuild 版本是否可用于该项目：参数=(msbuildMajor, solutionMajor)</param>
+        /// <param name="Score">评分函数，基于 msbuildMajor 计算</param>
+        private class ScoreRule
+        {
+            public Func<int?, int?, int?, bool> Condition { get; init; } = (_, _, _) => false;
+            public Func<int?, int?, bool> Usable { get; init; } = (_, _) => false;
+            public Func<int?, int?> Score { get; init; } = _ => null;
+        }
+
+        private static readonly List<ScoreRule> _scoreRules = BuildScoreRules();
+
+        private static List<ScoreRule> BuildScoreRules()
+        {
+            return new List<ScoreRule>
+            {
+                // ---- .NET Framework 项目 ----
+                new() { Condition = (_, __, ___) => true, Usable = (m, _) => m >= 16, Score = m => 100 + m },  // VS 2019/2022
+                new() { Condition = (_, __, ___) => true, Usable = (m, _) => m == 14, Score = _ => 50 },      // MSBuild 14.0
+
+                // ---- .NET 5+/Core 项目，目标框架已解析 ----
+                new() { Condition = (tf, _, __) => tf.HasValue && tf < 5, Usable = (m, _) => m == 0, Score = _ => 100 },           // dotnet SDK
+                new() { Condition = (tf, _, __) => tf.HasValue, Usable = (m, _) => m >= 17, Score = m => 80 + m },                // VS 2022+
+                new() { Condition = (tf, _, __) => tf.HasValue && tf <= 3, Usable = (m, _) => m == 16, Score = _ => 60 },          // VS 2019
+
+                // ---- 解决方案格式版本已解析 ----
+                new() { Condition = (_, sln, __) => sln.HasValue, Usable = (m, _) => m == 0, Score = _ => 70 },                                                                              // dotnet SDK（通用备选）
+                new() { Condition = (_, sln, __) => sln.HasValue, Usable = (m, sln) => m == sln, Score = _ => 200 },                                                                           // 精确版本
+                new() { Condition = (_, sln, __) => sln.HasValue, Usable = (m, sln) => Math.Abs((m ?? 0) - (sln ?? 0)) <= 1, Score = _ => 90 },  // 邻近版本
+            };
+        }
+
+        /// <summary>
+        /// 从 MSBuildVersion 中探测主版本号，失败返回 null
+        /// </summary>
+        private int? DetectMSBuildMajor(MSBuildVersion v)
+        {
+            var pathLower = v.Path.ToLower();
+            var displayLower = v.DisplayName.ToLower();
+
+            if (v.VisualStudioVersion == ".NET SDK" || pathLower == "dotnet")
+                return 0;
+
+            foreach (var (patterns, major) in _msbuildVersionPatterns)
+            {
+                if (patterns.Any(p => pathLower.Contains(p) || displayLower.Contains(p)))
+                    return major;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 根据项目文件信息，匹配最合适的 MSBuild 版本
+        /// </summary>
+        /// <param name="projectInfo">解析后的项目文件信息</param>
+        /// <param name="availableVersions">可选，指定 MSBuild 版本列表，默认使用已检测的版本</param>
+        /// <returns>最匹配的 MSBuild 版本，未找到则返回 null</returns>
+        public MSBuildVersion? MatchBestMSBuild(ProjectFileInfo? projectInfo, IList<MSBuildVersion>? availableVersions = null)
+        {
+            if (projectInfo == null)
+                return null;
+
+            var versions = availableVersions ?? DetectMSBuildVersions();
+            if (versions.Count == 0)
+                return null;
+
+            // 提取项目特征
+            int? targetNetMajor = null;
+            if (!string.IsNullOrEmpty(projectInfo.TargetFramework))
+            {
+                var m = Regex.Match(projectInfo.TargetFramework, @"net(\d+)");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int major))
+                    targetNetMajor = major;
+            }
+
+            int? solutionMajor = null;
+            if (!string.IsNullOrEmpty(projectInfo.SolutionFormatVersion))
+            {
+                var m = Regex.Match(projectInfo.SolutionFormatVersion, @"v(\d+)");
+                if (m.Success && int.TryParse(m.Groups[1].Value, out int sm))
+                    solutionMajor = sm;
+            }
+
+            bool isNetFramework = !string.IsNullOrEmpty(projectInfo.TargetFrameworkVersion) ||
+                (targetNetMajor == null && solutionMajor == null);
+
+            MSBuildVersion? best = null;
+            int bestScore = int.MinValue;
+
+            foreach (var v in versions)
+            {
+                int? msbuildMajor = DetectMSBuildMajor(v);
+                if (msbuildMajor == null)
+                    continue;
+
+                int? effectiveTargetMajor = isNetFramework ? null : targetNetMajor;
+                int? effectiveSlnMajor = isNetFramework ? null : solutionMajor;
+
+                foreach (var rule in _scoreRules)
+                {
+                    if (!rule.Condition(effectiveTargetMajor, effectiveSlnMajor, msbuildMajor))
+                        continue;
+
+                    if (!rule.Usable(msbuildMajor, effectiveSlnMajor))
+                        continue;
+
+                    var rawScore = rule.Score(msbuildMajor);
+                    if (rawScore == null)
+                        continue;
+                    int score = rawScore.Value;
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        best = v;
+                    }
+                    break; // 规则已按优先级排列，匹配到即停
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
         /// 使用 vswhere.exe 查找所有已安装的 Visual Studio
         /// </summary>
         private void FindMSBuildWithVswhere(List<MSBuildVersion> versions)

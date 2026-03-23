@@ -1,6 +1,38 @@
 namespace DotNetBuilder.Models
 {
     /// <summary>
+    /// 项目文件解析信息
+    /// </summary>
+    public class ProjectFileInfo
+    {
+        /// <summary>
+        /// 项目文件路径
+        /// </summary>
+        public string? FilePath { get; set; }
+
+        /// <summary>
+        /// 目标框架，如 net8.0, net9.0-windows, net48
+        /// </summary>
+        public string? TargetFramework { get; set; }
+
+        /// <summary>
+        /// .NET Framework 版本，如 v4.7.2, v4.8
+        /// </summary>
+        public string? TargetFrameworkVersion { get; set; }
+
+        /// <summary>
+        /// Visual Studio 解决方案版本，如 v17.0, v16.0
+        /// </summary>
+        public string? SolutionFormatVersion { get; set; }
+
+        /// <summary>
+        /// 是否为 .NET Framework 项目（而非 .NET Core/5+/6+）
+        /// </summary>
+        public bool IsNetFramework => TargetFrameworkVersion != null ||
+            (TargetFramework != null && !TargetFramework.StartsWith("net") || TargetFramework == null && SolutionFormatVersion != null);
+    }
+
+    /// <summary>
     /// MSBuild版本信息
     /// </summary>
     public class MSBuildVersion

@@ -372,8 +372,12 @@ namespace DotNetBuilder.ViewModels
                     project.SolutionPath = _gitService.GetSolutionPath(project.Path);
                     project.ProjectFilePath = _gitService.GetProjectFilePath(project.Path);
                     project.SortOrder = sortOrder++;
-                    if (MSBuildVersions.Count > 0)
-                        project.SelectedMSBuildVersion = MSBuildVersions[0];
+
+                    // 智能匹配 MSBuild 版本
+                    var projectInfo = _gitService.ParseProjectFile(project.Path);
+                    var matched = _msbuildService.MatchBestMSBuild(projectInfo, MSBuildVersions.ToList());
+                    project.SelectedMSBuildVersion = matched ?? MSBuildVersions.FirstOrDefault();
+
                     AddProject(project);
                 }
 
@@ -406,8 +410,12 @@ namespace DotNetBuilder.ViewModels
             project.SolutionPath = _gitService.GetSolutionPath(project.Path);
             project.ProjectFilePath = _gitService.GetProjectFilePath(project.Path);
             project.SortOrder = Projects.Count;
-            if (MSBuildVersions.Count > 0)
-                project.SelectedMSBuildVersion = MSBuildVersions[0];
+
+            // 智能匹配 MSBuild 版本
+            var projectInfo = _gitService.ParseProjectFile(project.Path);
+            var matched = _msbuildService.MatchBestMSBuild(projectInfo, MSBuildVersions.ToList());
+            project.SelectedMSBuildVersion = matched ?? MSBuildVersions.FirstOrDefault();
+
             AddProject(project);
             _appendLog($"已添加项目: {project.Name}\n");
         }
@@ -457,10 +465,19 @@ namespace DotNetBuilder.ViewModels
                     {
                         project.SelectedMSBuildVersion = msbuild;
                     }
+                    else
+                    {
+                        // 已保存版本在当前系统中未找到，尝试智能匹配
+                        var projectInfo = _gitService.ParseProjectFile(project.Path);
+                        var matched = _msbuildService.MatchBestMSBuild(projectInfo, msbuildVersionsList);
+                        project.SelectedMSBuildVersion = matched ?? msbuildVersionsList.FirstOrDefault();
+                    }
                 }
                 else if (msbuildVersionsList.Count > 0)
                 {
-                    project.SelectedMSBuildVersion = msbuildVersionsList[0];
+                    var projectInfo = _gitService.ParseProjectFile(project.Path);
+                    var matched = _msbuildService.MatchBestMSBuild(projectInfo, msbuildVersionsList);
+                    project.SelectedMSBuildVersion = matched ?? msbuildVersionsList[0];
                 }
 
                 // 更新 Git 状态
