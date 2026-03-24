@@ -15,6 +15,7 @@ namespace DotNetBuilder.ViewModels
     {
         private readonly ProjectService _projectService;
         private readonly NavigationService _navigationService;
+        private readonly ConfigService _configService;
 
         // 回调函数
         private Action? _onNewProject;
@@ -29,6 +30,7 @@ namespace DotNetBuilder.ViewModels
         {
             _projectService = projectService;
             _navigationService = navigationService;
+            _configService = new ConfigService();
 
             _ = LoadRecentProjectsAsync();
         }
@@ -90,15 +92,25 @@ namespace DotNetBuilder.ViewModels
         [RelayCommand]
         public void Loaded(FrameworkElement sender)
         {
-            if (sender == null) return; 
+            if (sender == null) return;
+
+            // 检查是否已经显示过引导
+            var config = _configService.LoadConfig();
+            if (config?.HasShownGuide == true)
+                return;
+
             var window = Window.GetWindow(sender);
-            if (window == null) return; 
-            // 启动 main 分组的引导，显示上一步、下一步、跳过按钮
+            if (window == null) return;
+
+            // 启动引导，显示上一步、下一步、跳过按钮
             window.StartGuide("New", g =>
             {
                 g.ShowSkipButton = true;
                 g.ShowPreviousButton = true;
             });
+
+            // 标记引导已显示
+            _configService.SetHasShownGuide();
         }
         #endregion
     }

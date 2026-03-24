@@ -80,6 +80,49 @@ namespace DotNetBuilder.Services
         /// 配置文件是否存在
         /// </summary>
         public bool ConfigExists => File.Exists(_configFilePath);
+
+        /// <summary>
+        /// 标记引导已显示（简单方法，仅设置标志）
+        /// </summary>
+        public void SetHasShownGuide()
+        {
+            try
+            {
+                var config = LoadConfig();
+                if (config == null)
+                {
+                    // 如果配置不存在，创建一个新的
+                    config = new AppConfig();
+                }
+
+                config.HasShownGuide = true;
+                var json = JsonSerializer.Serialize(config, _jsonOptions);
+                File.WriteAllText(_configFilePath, json);
+            }
+            catch
+            {
+                // 忽略错误
+            }
+        }
+
+        /// <summary>
+        /// 加载配置（同步）
+        /// </summary>
+        public AppConfig? LoadConfig()
+        {
+            try
+            {
+                if (!File.Exists(_configFilePath))
+                    return null;
+
+                var json = File.ReadAllText(_configFilePath);
+                return JsonSerializer.Deserialize<AppConfig>(json, _jsonOptions);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 
     /// <summary>
@@ -89,6 +132,10 @@ namespace DotNetBuilder.Services
     {
         public string? SelectedPath { get; set; }
         public List<ProjectConfig> Projects { get; set; } = new();
+        /// <summary>
+        /// 是否已显示过用户引导
+        /// </summary>
+        public bool HasShownGuide { get; set; }
     }
 
     /// <summary>
