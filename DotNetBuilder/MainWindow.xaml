@@ -94,14 +94,37 @@
                 </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>
             <AduSkin:AduTitleMenuItem Header="编辑(_E)">
-                <AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志" />
+                <AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志">
+                    <AduSkin:AduMenuItem.Icon>
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_Clear}"
+                            Fill="{DynamicResource NormalForeground}" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>
             <AduSkin:AduTitleMenuItem Header="帮助(_H)">
                 <AduSkin:AduMenuItem Command="{Binding RegisterFileAssociationCommand}" Header="注册 .bdproj 文件关联">
                     <AduSkin:AduMenuItem.ToolTip>双击 .bdproj 文件用 DotNetBuilder 打开</AduSkin:AduMenuItem.ToolTip>
+                    <AduSkin:AduMenuItem.Icon>
+                        <Path
+                            Width="12"
+                            Data="{DynamicResource Icon_Correlation}"
+                            Fill="{DynamicResource NormalForeground}" />
+                    </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
                 <Separator />
-                <AduSkin:AduMenuItem Command="{Binding AboutCommand}" Header="关于" />
+                <AduSkin:AduMenuItem
+                    Command="Interactivity:ControlCommands.OpenLink"
+                    CommandParameter="https://github.com/AduDesign/DotNetBuilder"
+                    Header="关于">
+                    <AduSkin:AduMenuItem.Icon>
+                        <Image
+                            Width="16"
+                            Height="16"
+                            Source="/builder.ico" />
+                    </AduSkin:AduMenuItem.Icon>
+                </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>
         </AduSkin:AduTitleMenu>
     </AduSkin:AduWindow.Menu>
