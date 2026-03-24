@@ -23,6 +23,13 @@
                     Text="新建项目" />
                 <AduSkin:AduFormBox
                     Margin="0,15,0,5"
+                    AduAttach:GuideAttach.StepCanNext="{Binding CanProceedStepProjectName}"
+                    AduAttach:GuideAttach.StepDescription="项目名称"
+                    AduAttach:GuideAttach.StepGroupName="New"
+                    AduAttach:GuideAttach.StepName="第二步"
+                    AduAttach:GuideAttach.StepOrder="2"
+                    AduAttach:GuideAttach.StepPosition="Bottom"
+                    AduAttach:GuideAttach.StepShowPreviousButton="False"
                     AduAttach:HeaderAttach.HorizontalAlignment="Left"
                     AduAttach:LayoutAttach.DirectionType="Vertical"
                     Header="项目名称">
@@ -34,6 +41,13 @@
 
                 <AduSkin:AduFormBox
                     Margin="0,15,0,5"
+                    AduAttach:GuideAttach.StepCanNext="{Binding CanProceedStepProjectPath}"
+                    AduAttach:GuideAttach.StepDescription="选择项目保存目录"
+                    AduAttach:GuideAttach.StepGroupName="New"
+                    AduAttach:GuideAttach.StepName="第三步"
+                    AduAttach:GuideAttach.StepOrder="3"
+                    AduAttach:GuideAttach.StepPosition="Bottom"
+                    AduAttach:GuideAttach.StepShowPreviousButton="False"
                     AduAttach:HeaderAttach.HorizontalAlignment="Left"
                     AduAttach:LayoutAttach.DirectionType="Vertical"
                     Header="项目根目录">
@@ -72,6 +86,13 @@
                     <AduSkin:AduButton
                         Width="80"
                         Margin="0,0,0,0"
+                        AduAttach:GuideAttach.StepDescription="创建项目"
+                        AduAttach:GuideAttach.StepGroupName="New"
+                        AduAttach:GuideAttach.StepIsAutoNext="True"
+                        AduAttach:GuideAttach.StepName="第四步"
+                        AduAttach:GuideAttach.StepOrder="4"
+                        AduAttach:GuideAttach.StepPosition="Bottom"
+                        AduAttach:GuideAttach.StepShowPreviousButton="False"
                         Background="{DynamicResource PrimaryBrush}"
                         Command="{Binding ConfirmCommand}"
                         Content="创建"

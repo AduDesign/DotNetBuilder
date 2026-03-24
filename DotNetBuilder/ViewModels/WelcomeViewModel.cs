@@ -1,8 +1,10 @@
-using System.Collections.ObjectModel;
+using AduSkin.AdditionalAttributes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
+using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace DotNetBuilder.ViewModels
 {
@@ -19,7 +21,7 @@ namespace DotNetBuilder.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<RecentProject> _recentProjects = new();
-         
+
         [ObservableProperty]
         private RecentProject _selectedProject;
 
@@ -83,5 +85,21 @@ namespace DotNetBuilder.ViewModels
             config.RecentProjects.RemoveAll(p => p.FilePath == recent.FilePath);
             await _projectService.SaveAppConfigAsync(config);
         }
+
+        #region 引导
+        [RelayCommand]
+        public void Loaded(FrameworkElement sender)
+        {
+            if (sender == null) return; 
+            var window = Window.GetWindow(sender);
+            if (window == null) return; 
+            // 启动 main 分组的引导，显示上一步、下一步、跳过按钮
+            window.StartGuide("New", g =>
+            {
+                g.ShowSkipButton = true;
+                g.ShowPreviousButton = true;
+            });
+        }
+        #endregion
     }
 }

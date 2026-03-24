@@ -442,7 +442,9 @@
                                 AduAttach:PathDataAttach.Width="14" />
                             <Popup
                                 AllowsTransparency="True"
+                                HorizontalOffset="-220"
                                 IsOpen="{Binding ElementName=gitSetting, Path=IsChecked}"
+                                Placement="Bottom"
                                 PlacementTarget="{Binding ElementName=gitSetting}"
                                 StaysOpen="False">
                                 <Border

@@ -1,5 +1,7 @@
+using AduSkin.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input; 
+using CommunityToolkit.Mvvm.Input;
+using System.IO;
 
 namespace DotNetBuilder.ViewModels
 {
@@ -10,24 +12,38 @@ namespace DotNetBuilder.ViewModels
     {
         private Action<string, string>? _onConfirmCallback;
 
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(CanConfirm))]
+        [ObservableProperty] 
+        [NotifyPropertyChangedFor(nameof(CanProceedStepProjectName))]
+        [NotifyCanExecuteChangedFor(nameof(ConfirmCommand))]
         private string _newProjectName = "新项目";
 
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(CanConfirm))]
+        [NotifyPropertyChangedFor(nameof(CanProceedStepProjectPath))]
+        [NotifyCanExecuteChangedFor(nameof(ConfirmCommand))]
         private string _newProjectRootPath = string.Empty;
+        partial void OnNewProjectRootPathChanged(string? oldValue, string newValue)
+        {
+            if (File.Exists(NewProjectRootPath))
+            {
+                AduMessageBox.Show("项目文件已存在，请修改项目名称或者换个目录！");
+            }
+        }
 
         [ObservableProperty]
         private bool _showDialog;
 
-        public bool CanConfirm => !string.IsNullOrWhiteSpace(NewProjectName) &&
+        public bool CanConfirm() => !string.IsNullOrWhiteSpace(NewProjectName) &&
                                   !string.IsNullOrWhiteSpace(NewProjectRootPath);
-         
 
-        public NewProjectDialogViewModel()
-        {
-        }
+        /// <summary>
+        /// 校验项目名
+        /// </summary>
+        public bool CanProceedStepProjectName => !string.IsNullOrEmpty(NewProjectName) && NewProjectName.Length >= 0;
+
+        /// <summary>
+        /// 校验路径
+        /// </summary>
+        public bool CanProceedStepProjectPath => !string.IsNullOrEmpty(NewProjectRootPath) && NewProjectRootPath.Length >= 0 && !File.Exists(NewProjectRootPath);
 
         [RelayCommand]
         private void Browse()
@@ -39,8 +55,8 @@ namespace DotNetBuilder.ViewModels
 
             if (dialog.ShowDialog() == true)
                 NewProjectRootPath = dialog.FolderName;
-        } 
-        [RelayCommand]
+        }
+        [RelayCommand(CanExecute = nameof(CanConfirm))]
         private void Confirm()
         {
             ShowDialog = false;

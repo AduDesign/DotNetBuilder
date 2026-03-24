@@ -73,7 +73,21 @@
                     </AduSkin:AduMenuItem.Icon>
                     <AduSkin:AduMenuItem.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Name}" ToolTip="{Binding FilePath}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <Path
+                                    Width="14"
+                                    Data="{DynamicResource Icon_Builder}"
+                                    Stretch="Uniform" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="10,0,0,0"
+                                    Text="{Binding Name}"
+                                    ToolTip="{Binding FilePath}" />
+                            </Grid>
                         </DataTemplate>
                     </AduSkin:AduMenuItem.ItemTemplate>
                     <AduSkin:AduMenuItem.ItemContainerStyle>

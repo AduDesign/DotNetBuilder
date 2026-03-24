@@ -5,7 +5,13 @@
     xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
+    x:Name="Root"
     Background="{DynamicResource NormalBackground}">
+    <Interactivity:Interaction.Triggers>
+        <Interactivity:EventTrigger EventName="Loaded">
+            <Interactivity:EventToCommand Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=Root}" />
+        </Interactivity:EventTrigger>
+    </Interactivity:Interaction.Triggers>
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -40,6 +46,12 @@
                 <AduSkin:AduButton
                     Width="120"
                     Height="34"
+                    AduAttach:GuideAttach.StepDescription="点击“新建项目”。"
+                    AduAttach:GuideAttach.StepGroupName="New"
+                    AduAttach:GuideAttach.StepIsAutoNext="True"
+                    AduAttach:GuideAttach.StepName="第一步"
+                    AduAttach:GuideAttach.StepOrder="1"
+                    AduAttach:GuideAttach.StepPosition="Bottom"
                     Background="{DynamicResource PrimaryBrush}"
                     Command="{Binding NewProjectCommand}"
                     Content="新建项目"
