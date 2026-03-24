@@ -327,6 +327,75 @@ namespace DotNetBuilder.Models
             }
         }
 
+        private RemoteStatusInfo? _remoteStatus;
+
+        /// <summary>
+        /// 远程仓库状态
+        /// </summary>
+        public RemoteStatusInfo? RemoteStatus
+        {
+            get => _remoteStatus;
+            set
+            {
+                if (_remoteStatus != value)
+                {
+                    _remoteStatus = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(RemoteStatusDisplay));
+                    OnPropertyChanged(nameof(HasRemoteChanges));
+                    OnPropertyChanged(nameof(HasLocalUnpushedChanges));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 远程状态显示文本
+        /// </summary>
+        public string RemoteStatusDisplay
+        {
+            get
+            {
+                if (_remoteStatus == null)
+                    return "";
+
+                var parts = new List<string>();
+                if (_remoteStatus.LocalAheadCount > 0)
+                    parts.Add($"↑{_remoteStatus.LocalAheadCount}");
+                if (_remoteStatus.RemoteAheadCount > 0)
+                    parts.Add($"↓{_remoteStatus.RemoteAheadCount}");
+
+                return parts.Count > 0 ? string.Join(" ", parts) : "";
+            }
+        }
+
+        /// <summary>
+        /// 远程是否有更新
+        /// </summary>
+        public bool HasRemoteChanges => _remoteStatus?.HasRemoteChanges ?? false;
+
+        /// <summary>
+        /// 本地是否有未推送的提交
+        /// </summary>
+        public bool HasLocalUnpushedChanges => _remoteStatus?.HasLocalUnpushedChanges ?? false;
+
+        private bool _isCommitting;
+
+        /// <summary>
+        /// 是否正在提交
+        /// </summary>
+        public bool IsCommitting
+        {
+            get => _isCommitting;
+            set
+            {
+                if (_isCommitting != value)
+                {
+                    _isCommitting = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler? PropertyChanged;
 
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)

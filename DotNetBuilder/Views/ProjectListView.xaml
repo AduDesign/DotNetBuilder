@@ -120,7 +120,11 @@
                         </AduSkin:AduMenuItem>
                         <AduSkin:AduMenuItem Header="Git">
                             <AduSkin:AduMenuItem
-                                Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
+                                Command="{Binding CommitSingleCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="提交" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding SyncSingleCommand}"
                                 CommandParameter="{Binding SelectedItem}"
                                 Header="同步" />
                             <AduSkin:AduMenuItem
@@ -210,12 +214,27 @@
                                             Text="构建中..."
                                             Visibility="Collapsed" />
                                         <TextBlock
+                                            x:Name="txtCommittingStatus"
+                                            HorizontalAlignment="Center"
+                                            FontSize="12"
+                                            Foreground="{DynamicResource PrimaryBrush}"
+                                            Text="提交中..."
+                                            Visibility="Collapsed" />
+                                        <TextBlock
                                             x:Name="txtChangesCount"
                                             HorizontalAlignment="Center"
                                             FontSize="12"
                                             FontWeight="Bold"
                                             Foreground="{Binding HasChanges, Converter={StaticResource HasChangesToBrushConverter}}"
                                             Text="{Binding ChangesCount, Converter={StaticResource ChangesCountConverter}}" />
+                                        <TextBlock
+                                            x:Name="txtRemoteStatus"
+                                            HorizontalAlignment="Center"
+                                            FontSize="10"
+                                            Foreground="#666"
+                                            Text="{Binding RemoteStatusDisplay}"
+                                            ToolTip="远程状态: ↑本地未推送 ↓远程有更新"
+                                            Visibility="{Binding RemoteStatusDisplay, Converter={StaticResource StringToVisibility}}" />
                                     </StackPanel>
 
                                     <!--  操作按钮  -->
@@ -279,6 +298,28 @@
                                                 HorizontalAlignment="Center"
                                                 AduAttach:PathDataAttach.Width="10"
                                                 IsActived="{Binding IsBuilding}"
+                                                Type="Apple" />
+                                        </Grid>
+                                        <Grid Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <AduSkin:AduPathIconButton
+                                                Margin="0"
+                                                AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
+                                                AduAttach:PathDataAttach.Margin="0"
+                                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Commit}"
+                                                AduAttach:PathDataAttach.Width="12"
+                                                Command="{Binding DataContext.CommitSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="提交此项目"
+                                                Visibility="{Binding IsCommitting, Converter={StaticResource BooleanToReVisibility}}" />
+                                            <AduSkin:AduLoading
+                                                Width="24"
+                                                Height="24"
+                                                MinWidth="24"
+                                                MinHeight="24"
+                                                Margin="0,0,5,0"
+                                                HorizontalAlignment="Center"
+                                                AduAttach:PathDataAttach.Width="10"
+                                                IsActived="{Binding IsCommitting}"
                                                 Type="Apple" />
                                         </Grid>
                                     </StackPanel>
@@ -395,6 +436,10 @@
                                 <Setter TargetName="txtBuildingStatus" Property="Visibility" Value="Visible" />
                                 <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding IsCommitting}" Value="True">
+                                <Setter TargetName="txtCommittingStatus" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="txtChangesCount" Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>
                 </AduSkin:AduListBox.ItemTemplate>
@@ -417,6 +462,10 @@
                 <StackPanel Margin="0,6,0,0">
                     <Grid>
                         <StackPanel Orientation="Horizontal">
+                            <AduSkin:AduPathIconButton
+                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Commit}"
+                                Command="{Binding CommitSelectedCommand}"
+                                ToolTip="一键Git提交" />
                             <AduSkin:AduPathIconButton
                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
                                 Command="{Binding SyncSelectedCommand}"

@@ -75,6 +75,114 @@ namespace DotNetBuilder.Services
         }
 
         /// <summary>
+        /// 提交项目（仅提交，不执行pull）
+        /// </summary>
+        public async Task<GitSyncResult> CommitProjectAsync(
+            GitProject project,
+            string? commitMessage,
+            bool autoCommitWhenNoMessage,
+            IProgress<string>? progress = null)
+        {
+            var result = new GitSyncResult { ProjectName = project.Name };
+
+            try
+            {
+                // 1. 检查本地是否有未提交的更改
+                var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
+                var hasLocalChanges = !string.IsNullOrWhiteSpace(statusResult);
+
+                if (!hasLocalChanges)
+                {
+                    result.Success = true;
+                    result.Message = "无需提交（没有更改）";
+                    progress?.Report($"[{project.Name}] 没有需要提交的更改");
+                    return result;
+                }
+
+                var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+                progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改");
+
+                // 2. 决定是否提交
+                if (string.IsNullOrWhiteSpace(commitMessage))
+                {
+                    if (autoCommitWhenNoMessage)
+                    {
+                        commitMessage = $"Sync changes {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                        progress?.Report($"[{project.Name}] 未填写提交信息，使用默认: {commitMessage}");
+                    }
+                    else
+                    {
+                        result.Success = false;
+                        result.Message = "有未提交的更改，请填写提交信息";
+                        result.NeedsCommitMessage = true;
+                        return result;
+                    }
+                }
+
+                // 3. git add .
+                progress?.Report($"[{project.Name}] 暂存更改...");
+                await RunGitCommandAsync(project.Path, "add .");
+
+                // 4. git commit
+                progress?.Report($"[{project.Name}] 提交更改: {commitMessage}");
+                var escapedMessage = commitMessage.Replace("\"", "\\\"");
+                var commitResult = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
+
+                // 检查是否真的有新提交（避免空提交）
+                if (!string.IsNullOrWhiteSpace(commitResult) && !commitResult.Contains("nothing to commit"))
+                {
+                    result.HasCommit = true;
+                    result.CommitMessage = commitMessage;
+                    result.Success = true;
+                    result.Message = "提交成功";
+                    progress?.Report($"[{project.Name}] 提交成功: {commitMessage}");
+                }
+                else
+                {
+                    result.Success = true;
+                    result.Message = "无需提交";
+                    progress?.Report($"[{project.Name}] 没有新的提交");
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = $"提交失败: {ex.Message}";
+                progress?.Report($"[{project.Name}] 提交异常: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 获取变更文件列表
+        /// </summary>
+        public async Task<List<string>> GetChangedFilesAsync(GitProject project)
+        {
+            var files = new List<string>();
+            try
+            {
+                var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
+                if (string.IsNullOrWhiteSpace(statusResult))
+                    return files;
+
+                var lines = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var line in lines)
+                {
+                    // 格式: "XY filename" 如 "M  file.cs", "A  new.cs", "?? untracked.cs"
+                    var parts = line.Split(' ', 2);
+                    if (parts.Length >= 2)
+                    {
+                        files.Add(parts[1].Trim());
+                    }
+                }
+            }
+            catch { }
+
+            return files;
+        }
+
+        /// <summary>
         /// 同步项目
         /// </summary>
         public async Task<GitSyncResult> SyncProjectAsync(

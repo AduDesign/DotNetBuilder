@@ -308,6 +308,8 @@ namespace DotNetBuilder.ViewModels
             {
                 if (e.PropertyName == nameof(GitProject.IsSelected))
                 {
+                    CommitSelectedCommand.NotifyCanExecuteChanged();
+                    PushSelectedCommand.NotifyCanExecuteChanged();
                     SyncSelectedCommand.NotifyCanExecuteChanged();
                     BuildSelectedCommand.NotifyCanExecuteChanged();
                     UpdateIsSelectedAll();
@@ -568,6 +570,69 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
+        private async Task CommitSingleAsync(GitProject? project)
+        {
+            if (project == null)
+                return;
+
+            _appendLog($"\n========== 提交项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsCommitting = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+
+                var result = await _gitSyncService.CommitProjectAsync(
+                    project,
+                    project.CommitMessage,
+                    project.AutoCommitWhenNoMessage,
+                    progress);
+
+                if (result.Success)
+                {
+                    if (result.HasCommit)
+                    {
+                        project.CommitMessage = ""; // 提交成功后清空
+                        _appendLog($"[{project.Name}] 提交完成\n");
+                    }
+                    else
+                    {
+                        _appendLog($"[{project.Name}] {result.Message}\n");
+                    }
+                    project.IsExpanded = false;
+                }
+                else
+                {
+                    if (result.NeedsCommitMessage)
+                    {
+                        _appendLog($"[{project.Name}] 需要填写提交信息\n");
+                        project.IsExpanded = true;
+                    }
+                    else
+                    {
+                        project.ErrorMessage = result.Message;
+                        _appendLog($"[{project.Name}] 提交失败: {result.Message}\n");
+                    }
+                }
+
+                // 更新远程状态
+                await _gitService.UpdateProjectStatusAsync(project);
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 提交异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsCommitting = false;
+            }
+        }
+
         #endregion
 
         #region 一键命令
@@ -786,6 +851,107 @@ namespace DotNetBuilder.ViewModels
             }
         }
         private bool CanPushSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
+
+        [RelayCommand(CanExecute = nameof(CanCommitSelected))]
+        private async Task CommitSelectedAsync()
+        {
+            var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
+            if (!selectedProjects.Any())
+            {
+                AduMessageBox.Show("请先选择要提交的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // 检查是否有需要填写提交信息的项目
+            var needsMessage = selectedProjects.Where(p => p.HasChanges && string.IsNullOrWhiteSpace(p.CommitMessage) && !p.AutoCommitWhenNoMessage).ToList();
+            if (needsMessage.Any())
+            {
+                var names = string.Join(", ", needsMessage.Select(p => p.Name));
+                AduMessageBox.Show($"以下项目有未提交的更改且未勾选自动提交，请填写提交信息或勾选自动提交:\n{names}", "需要提交信息", MessageBoxButton.OK, MessageBoxImage.Information);
+                // 展开需要填写信息的项目
+                foreach (var p in needsMessage)
+                    p.IsExpanded = true;
+                return;
+            }
+
+            IsBusy = true;
+            _appendLog($"\n========== 开始提交 {selectedProjects.Count} 个项目 ==========\n");
+
+            try
+            {
+                var tasks = selectedProjects.Select(async project =>
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        project.ClearError();
+                        project.IsCommitting = true;
+                        project.IsExpanded = true;
+                    });
+
+                    try
+                    {
+                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+
+                        var result = await _gitSyncService.CommitProjectAsync(
+                            project,
+                            project.CommitMessage,
+                            project.AutoCommitWhenNoMessage,
+                            progress);
+
+                        if (result.Success)
+                        {
+                            if (result.HasCommit)
+                            {
+                                await Application.Current.Dispatcher.InvokeAsync(() =>
+                                {
+                                    project.CommitMessage = "";
+                                    project.IsExpanded = false;
+                                });
+                                _appendLog($"[{project.Name}] 提交完成\n");
+                            }
+                            else
+                            {
+                                _appendLog($"[{project.Name}] {result.Message}\n");
+                                await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
+                            }
+                        }
+                        else
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.ErrorMessage = result.Message;
+                                project.IsExpanded = true;
+                            });
+                            _appendLog($"[{project.Name}] 提交失败: {result.Message}\n");
+                        }
+
+                        // 更新状态
+                        await _gitService.UpdateProjectStatusAsync(project);
+                    }
+                    catch (Exception ex)
+                    {
+                        _appendLog($"[{project.Name}] 提交异常: {ex.Message}\n");
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsCommitting = false);
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                _appendLog($"\n========== 提交完成 ==========\n");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        private bool CanCommitSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
 
         private SyncOptions GetSyncOptions() => new()
         {
