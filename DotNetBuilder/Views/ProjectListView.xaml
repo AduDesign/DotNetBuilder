@@ -121,6 +121,10 @@
                             Command="{Binding RemoveProjectCommand}"
                             CommandParameter="{Binding SelectedItem}"
                             Header="删除" />
+                        <AduSkin:AduMenuItem
+                            Command="{Binding PushProjectCommand}"
+                            CommandParameter="{Binding SelectedItem}"
+                            Header="推送" />
                     </AduSkin:AduContextMenu>
                 </AduSkin:AduListBox.ContextMenu>
                 <AduSkin:AduListBox.ItemTemplate>
@@ -422,6 +426,14 @@
                             Content="无信息时自动提交"
                             IsChecked="{Binding GlobalAutoCommitWhenNoMessage}"
                             ToolTip="未填写提交信息时，使用默认信息提交" />
+                        <AduSkin:AduSwitch
+                            Margin="5,0,0,0"
+                            Content="同步后推送"
+                            IsChecked="{Binding GlobalPushOnSync}"
+                            ToolTip="同步完成后推送到远程仓库" />
+                        <AduSkin:AduButton Content="一键推送" Command="{Binding PushSelectedCommand}">
+                            
+                        </AduSkin:AduButton>
                     </StackPanel>
 
                     <!--  构建和运行选项  -->

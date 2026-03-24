@@ -61,6 +61,9 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private bool _globalAutoCommitWhenNoMessage = false;
 
+        [ObservableProperty]
+        private bool _globalPushOnSync = false;
+
         public ObservableCollection<GitProject> Projects { get; } = new();
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
         public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Debug","Release" };
@@ -679,7 +682,8 @@ namespace DotNetBuilder.ViewModels
         {
             PullStrategy = GlobalPullStrategy,
             ConflictAction = GlobalConflictAction,
-            AutoCommitWhenNoMessage = GlobalAutoCommitWhenNoMessage
+            AutoCommitWhenNoMessage = GlobalAutoCommitWhenNoMessage,
+            PushOnSync = GlobalPushOnSync
         };
 
         private async Task HandleSyncResultAsync(GitProject project, GitSyncResult result, IProgress<string> progress)

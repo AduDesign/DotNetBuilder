@@ -52,6 +52,29 @@ namespace DotNetBuilder.Services
         }
 
         /// <summary>
+        /// 推送项目到远程
+        /// </summary>
+        public async Task<bool> PushProjectAsync(GitProject project, IProgress<string>? progress = null)
+        {
+            try
+            {
+                var pushResult = await RunGitCommandAsync(project.Path, "push");
+                if (pushResult.Contains("error") || pushResult.Contains("failed") || pushResult.Contains("rejected"))
+                {
+                    progress?.Report($"[{project.Name}] Push失败: {pushResult}");
+                    return false;
+                }
+                progress?.Report($"[{project.Name}] Push成功");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                progress?.Report($"[{project.Name}] Push异常: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// 同步项目
         /// </summary>
         public async Task<GitSyncResult> SyncProjectAsync(
@@ -131,8 +154,21 @@ namespace DotNetBuilder.Services
                     return result;
                 }
 
+                // 7. 执行 push（如果启用）
+                if (options.PushOnSync)
+                {
+                    progress?.Report($"[{project.Name}] 推送到远程...");
+                    var pushPushResult = await PushProjectAsync(project, progress);
+                    if (!pushPushResult)
+                    {
+                        result.Success = false;
+                        result.Message = "Pull成功，但Push失败";
+                        return result;
+                    }
+                }
+
                 result.Success = true;
-                result.Message = "同步完成";
+                result.Message = options.PushOnSync ? "同步完成（已推送）" : "同步完成";
             }
             catch (GitConflictException ex)
             {
@@ -364,6 +400,11 @@ namespace DotNetBuilder.Services
         /// 冲突时的处理方式
         /// </summary>
         public ConflictAction ConflictAction { get; set; } = ConflictAction.Prompt;
+
+        /// <summary>
+        /// 同步后是否推送到远程
+        /// </summary>
+        public bool PushOnSync { get; set; } = false;
     }
 
     /// <summary>

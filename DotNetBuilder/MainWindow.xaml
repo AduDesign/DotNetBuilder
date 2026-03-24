@@ -152,13 +152,13 @@
         <!--  加载中遮罩  -->
         <Border
             Grid.RowSpan="4"
-            Background="#80000000"
+            Background="#90FFFFFF"
             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <AduSkin:AduLoading
+                <AduSkin:AduProgressRing
                     Width="100"
                     Height="100"
-                    IsActived="{Binding IsBusy}" />
+                    IsActive="{Binding IsBusy}" />
                 <TextBlock
                     Margin="0,15,0,0"
                     HorizontalAlignment="Center"
