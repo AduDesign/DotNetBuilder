@@ -42,6 +42,26 @@ namespace DotNetBuilder.Models
         /// Git 项目列表
         /// </summary>
         public List<ProjectConfig> Projects { get; set; } = new();
+
+        /// <summary>
+        /// 全局拉取策略
+        /// </summary>
+        public PullStrategy GlobalPullStrategy { get; set; } = PullStrategy.Auto;
+
+        /// <summary>
+        /// 全局冲突处理方式
+        /// </summary>
+        public ConflictAction GlobalConflictAction { get; set; } = ConflictAction.Prompt;
+
+        /// <summary>
+        /// 无提交信息时自动提交
+        /// </summary>
+        public bool GlobalAutoCommitWhenNoMessage { get; set; }
+
+        /// <summary>
+        /// 同步后推送
+        /// </summary>
+        public bool GlobalPushOnSync { get; set; }
     }
 
     /// <summary>

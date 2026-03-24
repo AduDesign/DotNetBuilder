@@ -170,6 +170,10 @@ namespace DotNetBuilder.ViewModels
                     Name = ToolbarViewModel.ProjectDisplayName.Replace(" *", ""),
                     RootPath = SelectedPath,
                     FilePath = filePath,
+                    GlobalPullStrategy = ProjectListViewModel.GlobalPullStrategy,
+                    GlobalConflictAction = ProjectListViewModel.GlobalConflictAction,
+                    GlobalAutoCommitWhenNoMessage = ProjectListViewModel.GlobalAutoCommitWhenNoMessage,
+                    GlobalPushOnSync = ProjectListViewModel.GlobalPushOnSync,
                     Projects = Projects.Select(p => new Models.ProjectConfig
                     {
                         Path = p.Path,
@@ -306,6 +310,12 @@ namespace DotNetBuilder.ViewModels
             {
                 SelectedPath = project.RootPath;
                 await ProjectListViewModel.LoadSavedProjectsAsync(project.Projects);
+
+                // 恢复全局同步设置
+                ProjectListViewModel.GlobalPullStrategy = project.GlobalPullStrategy;
+                ProjectListViewModel.GlobalConflictAction = project.GlobalConflictAction;
+                ProjectListViewModel.GlobalAutoCommitWhenNoMessage = project.GlobalAutoCommitWhenNoMessage;
+                ProjectListViewModel.GlobalPushOnSync = project.GlobalPushOnSync;
 
                 SelectedProject = ProjectListViewModel.Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
                 await WelcomeViewModel.LoadRecentProjectsAsync();
