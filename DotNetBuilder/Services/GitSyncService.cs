@@ -92,7 +92,16 @@ namespace DotNetBuilder.Services
                 var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
                 var hasLocalChanges = !string.IsNullOrWhiteSpace(statusResult);
 
-                if (hasLocalChanges)
+                // SkipCommit 策略跳过提交逻辑
+                if (options.PullStrategy == PullStrategy.SkipCommit)
+                {
+                    if (hasLocalChanges)
+                    {
+                        var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
+                        progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改（跳过提交）");
+                    }
+                }
+                else if (hasLocalChanges)
                 {
                     var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
                     progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改");

@@ -42,7 +42,8 @@ namespace DotNetBuilder.ViewModels
             PullStrategy.Auto,
             PullStrategy.Merge,
             PullStrategy.Rebase,
-            PullStrategy.CommitOnly
+            PullStrategy.CommitOnly,
+            PullStrategy.SkipCommit
         };
 
         public ObservableCollection<ConflictAction> ConflictActions { get; } = new()
@@ -528,6 +529,45 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        [RelayCommand]
+        private async Task PushProjectAsync(GitProject? project)
+        {
+            if (project == null)
+                return;
+
+            _appendLog($"\n========== 推送项目: {project.Name} ==========\n");
+
+            try
+            {
+                project.ClearError();
+                project.IsSyncing = true;
+                project.IsExpanded = true;
+
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                var success = await _gitSyncService.PushProjectAsync(project, progress);
+
+                if (success)
+                {
+                    _appendLog($"[{project.Name}] 推送成功\n");
+                    project.IsExpanded = false;
+                }
+                else
+                {
+                    project.ErrorMessage = "推送失败";
+                    _appendLog($"[{project.Name}] 推送失败\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 推送异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsSyncing = false;
+            }
+        }
+
         #endregion
 
         #region 一键命令
@@ -677,6 +717,75 @@ namespace DotNetBuilder.ViewModels
             }
         }
         private bool CanSyncSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
+
+        [RelayCommand(CanExecute = nameof(CanPushSelected))]
+        private async Task PushSelectedAsync()
+        {
+            var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
+            if (!selectedProjects.Any())
+            {
+                AduMessageBox.Show("请先选择要推送的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            IsBusy = true;
+            _appendLog($"\n========== 开始推送 {selectedProjects.Count} 个项目 ==========\n");
+
+            try
+            {
+                var tasks = selectedProjects.Select(async project =>
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        project.ClearError();
+                        project.IsSyncing = true;
+                        project.IsExpanded = true;
+                    });
+
+                    try
+                    {
+                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                        var success = await _gitSyncService.PushProjectAsync(project, progress);
+
+                        if (success)
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
+                            _appendLog($"[{project.Name}] 推送成功\n");
+                        }
+                        else
+                        {
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                project.ErrorMessage = "推送失败";
+                                project.IsExpanded = true;
+                            });
+                            _appendLog($"[{project.Name}] 推送失败\n");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _appendLog($"[{project.Name}] 推送异常: {ex.Message}\n");
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            project.ErrorMessage = ex.Message;
+                            project.IsExpanded = true;
+                        });
+                    }
+                    finally
+                    {
+                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                _appendLog($"\n========== 推送完成 ==========\n");
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+        private bool CanPushSelected() => !IsBusy && Projects.Any(p => p.IsSelected);
 
         private SyncOptions GetSyncOptions() => new()
         {

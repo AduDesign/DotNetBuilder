@@ -173,7 +173,12 @@ namespace DotNetBuilder.Models
         /// <summary>
         /// 仅提交本地，不 pull
         /// </summary>
-        CommitOnly
+        CommitOnly,
+
+        /// <summary>
+        /// 不提交，直接 pull（保留本地未提交更改）
+        /// </summary>
+        SkipCommit
     }
 
     /// <summary>
