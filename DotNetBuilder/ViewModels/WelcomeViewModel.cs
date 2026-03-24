@@ -62,9 +62,26 @@ namespace DotNetBuilder.ViewModels
             }
         }
         [RelayCommand]
-        public void OpenRecentProject(RecentProject recent)
+        public async Task OpenRecentProject(RecentProject recent)
         {
+            // 更新最后打开时间
+            recent.LastOpenedAt = DateTime.Now;
+            await _projectService.AddRecentProjectAsync(recent.Name, recent.FilePath);
+
             _navigationService.RequestOpenProject(recent.FilePath);
+        }
+
+        [RelayCommand]
+        private async Task RemoveProjectAsync(RecentProject? recent)
+        {
+            if (recent == null) return;
+
+            RecentProjects.Remove(recent);
+
+            // 更新 App 配置
+            var config = await _projectService.LoadAppConfigAsync();
+            config.RecentProjects.RemoveAll(p => p.FilePath == recent.FilePath);
+            await _projectService.SaveAppConfigAsync(config);
         }
     }
 }

@@ -254,6 +254,16 @@ namespace DotNetBuilder.ViewModels
         }
         private bool CanScanCurrentPath() => !IsBusy && !string.IsNullOrEmpty(SelectedPath);
 
+
+        [RelayCommand]
+        public void About()
+        {
+            AduMessageBox.Show(
+                ".NET Project Builder v1.0\n\n批量管理 Git 仓库和 .NET 项目\n支持并行构建和冲突处理",
+                "关于",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
         #endregion
 
         #region 方法

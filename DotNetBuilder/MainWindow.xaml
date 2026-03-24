@@ -7,8 +7,8 @@
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:views="clr-namespace:DotNetBuilder.Views"
     Title=".NET Project Builder"
-    Width="600"
-    Height="900"
+    Width="1000"
+    Height="700"
     MinWidth="600"
     MinHeight="600"
     AduAttach:HeaderAttach.Background="{DynamicResource NormalTransparentBrush}"
@@ -101,7 +101,7 @@
                     <AduSkin:AduMenuItem.ToolTip>双击 .bdproj 文件用 DotNetBuilder 打开</AduSkin:AduMenuItem.ToolTip>
                 </AduSkin:AduMenuItem>
                 <Separator />
-                <AduSkin:AduMenuItem Click="About_Click" Header="关于" />
+                <AduSkin:AduMenuItem Command="{Binding AboutCommand}" Header="关于" />
             </AduSkin:AduTitleMenuItem>
         </AduSkin:AduTitleMenu>
     </AduSkin:AduWindow.Menu>
