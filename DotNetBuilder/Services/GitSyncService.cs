@@ -28,14 +28,21 @@ namespace DotNetBuilder.Services
             try
             {
                 // 先 fetch 获取最新远程信息
-                await RunGitCommandAsync(project.Path, "fetch");
+                var (fetchOutput, fetchExitCode) = await RunGitCommandAsync(project.Path, "fetch");
+
+                if (fetchExitCode != 0)
+                {
+                    // Fetch 失败，可能是网络问题
+                    info.HasRemoteChanges = true;
+                    return info;
+                }
 
                 // 获取本地分支与远程分支的差异
-                var status = await RunGitCommandAsync(project.Path, "status -sb");
+                var (statusOutput, _) = await RunGitCommandAsync(project.Path, "status -sb");
 
                 // 解析状态: 如 "## develop...origin/develop [ahead 1, behind 2]"
-                var aheadMatch = Regex.Match(status, @"\[ahead (\d+)");
-                var behindMatch = Regex.Match(status, @"behind (\d+)");
+                var aheadMatch = Regex.Match(statusOutput, @"\[ahead (\d+)");
+                var behindMatch = Regex.Match(statusOutput, @"behind (\d+)");
 
                 info.LocalAheadCount = aheadMatch.Success ? int.Parse(aheadMatch.Groups[1].Value) : 0;
                 info.RemoteAheadCount = behindMatch.Success ? int.Parse(behindMatch.Groups[1].Value) : 0;
@@ -58,8 +65,22 @@ namespace DotNetBuilder.Services
         {
             try
             {
-                var pushResult = await RunGitCommandAsync(project.Path, "push");
-                if (pushResult.Contains("error") || pushResult.Contains("failed") || pushResult.Contains("rejected"))
+                var (pushResult, exitCode) = await RunGitCommandAsync(project.Path, "push");
+
+                // 检查退出码和输出内容
+                if (exitCode != 0 ||
+                    pushResult.Contains("error") ||
+                    pushResult.Contains("failed") ||
+                    pushResult.Contains("rejected") ||
+                    pushResult.Contains("fatal") ||
+                    pushResult.Contains("Connection") ||
+                    pushResult.Contains("connection") ||
+                    pushResult.Contains("timed out") ||
+                    pushResult.Contains("Network") ||
+                    pushResult.Contains("network") ||
+                    pushResult.Contains("Could not resolve") ||
+                    pushResult.Contains("Permission denied") ||
+                    pushResult.Contains("Authentication"))
                 {
                     progress?.Report($"[{project.Name}] Push失败: {pushResult}");
                     return false;
@@ -88,7 +109,7 @@ namespace DotNetBuilder.Services
             try
             {
                 // 1. 检查本地是否有未提交的更改
-                var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
+                var (statusResult, _) = await RunGitCommandAsync(project.Path, "status --porcelain");
                 var hasLocalChanges = !string.IsNullOrWhiteSpace(statusResult);
 
                 if (!hasLocalChanges)
@@ -126,16 +147,23 @@ namespace DotNetBuilder.Services
                 // 4. git commit
                 progress?.Report($"[{project.Name}] 提交更改: {commitMessage}");
                 var escapedMessage = commitMessage.Replace("\"", "\\\"");
-                var commitResult = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
+                var (commitResult, commitExitCode) = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
 
                 // 检查是否真的有新提交（避免空提交）
-                if (!string.IsNullOrWhiteSpace(commitResult) && !commitResult.Contains("nothing to commit"))
+                if (commitExitCode == 0 && !string.IsNullOrWhiteSpace(commitResult) && !commitResult.Contains("nothing to commit"))
                 {
                     result.HasCommit = true;
                     result.CommitMessage = commitMessage;
                     result.Success = true;
                     result.Message = "提交成功";
                     progress?.Report($"[{project.Name}] 提交成功: {commitMessage}");
+                }
+                else if (commitExitCode != 0)
+                {
+                    result.Success = false;
+                    result.Message = $"提交失败: {commitResult}";
+                    progress?.Report($"[{project.Name}] 提交失败: {commitResult}");
+                    return result;
                 }
                 else
                 {
@@ -162,8 +190,8 @@ namespace DotNetBuilder.Services
             var files = new List<string>();
             try
             {
-                var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
-                if (string.IsNullOrWhiteSpace(statusResult))
+                var (statusResult, exitCode) = await RunGitCommandAsync(project.Path, "status --porcelain");
+                if (exitCode != 0 || string.IsNullOrWhiteSpace(statusResult))
                     return files;
 
                 var lines = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -197,7 +225,7 @@ namespace DotNetBuilder.Services
             try
             {
                 // 1. 检查本地是否有未提交的更改
-                var statusResult = await RunGitCommandAsync(project.Path, "status --porcelain");
+                var (statusResult, _) = await RunGitCommandAsync(project.Path, "status --porcelain");
                 var hasLocalChanges = !string.IsNullOrWhiteSpace(statusResult);
 
                 // SkipCommit 策略跳过提交逻辑
@@ -240,10 +268,10 @@ namespace DotNetBuilder.Services
                     // 3. git commit
                     progress?.Report($"[{project.Name}] 提交更改: {commitMessage}");
                     var escapedMessage = commitMessage.Replace("\"", "\\\"");
-                    var commitResult = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
+                    var (commitResult, commitExitCode) = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
 
                     // 检查是否真的有新提交（避免空提交）
-                    if (!string.IsNullOrWhiteSpace(commitResult) && !commitResult.Contains("nothing to commit"))
+                    if (commitExitCode == 0 && !string.IsNullOrWhiteSpace(commitResult) && !commitResult.Contains("nothing to commit"))
                     {
                         result.HasCommit = true;
                         result.CommitMessage = commitMessage;
@@ -329,7 +357,7 @@ namespace DotNetBuilder.Services
                     case ConflictAction.AutoStash:
                         // 自动 stash
                         progress?.Report($"[{project.Name}] 尝试自动 stash 后 pull...");
-                        var stashResult = await RunGitCommandAsync(project.Path, "stash push -m \"DotNetBuilder auto stash\"");
+                        var (stashResult, _) = await RunGitCommandAsync(project.Path, "stash push -m \"DotNetBuilder auto stash\"");
                         progress?.Report($"[{project.Name}] stash 结果: {stashResult}");
 
                         // 执行 pull
@@ -338,7 +366,7 @@ namespace DotNetBuilder.Services
                         if (pullSuccess)
                         {
                             // 尝试 pop stash
-                            var popResult = await RunGitCommandAsync(project.Path, "stash pop");
+                            var (popResult, _) = await RunGitCommandAsync(project.Path, "stash pop");
                             if (popResult.Contains("CONFLICT") || popResult.Contains("conflict"))
                             {
                                 throw new GitConflictException("Stash pop 时产生冲突", ExtractConflictFiles(popResult));
@@ -393,27 +421,52 @@ namespace DotNetBuilder.Services
                 _ => "pull --no-commit"
             };
 
-            var pullResult = await RunGitCommandAsync(project.Path, pullArgs);
+            var (pullOutput, pullExitCode) = await RunGitCommandAsync(project.Path, pullArgs);
+
+            // 检查退出码
+            if (pullExitCode != 0)
+            {
+                // 检查是否是网络错误
+                if (pullOutput.Contains("Connection") ||
+                    pullOutput.Contains("connection") ||
+                    pullOutput.Contains("timed out") ||
+                    pullOutput.Contains("Network") ||
+                    pullOutput.Contains("Could not resolve") ||
+                    pullOutput.Contains("Permission denied") ||
+                    pullOutput.Contains("fatal"))
+                {
+                    progress?.Report($"[{project.Name}] 拉取失败（网络错误）: {pullOutput}");
+                    result.Success = false;
+                    result.Message = $"拉取失败: {pullOutput}";
+                    return false;
+                }
+
+                // 其他错误
+                progress?.Report($"[{project.Name}] 拉取失败: {pullOutput}");
+                result.Success = false;
+                result.Message = $"拉取失败: {pullOutput}";
+                return false;
+            }
 
             // 检查是否有冲突
-            if (pullResult.Contains("CONFLICT") ||
-                pullResult.Contains("conflict") ||
-                pullResult.Contains("合并冲突"))
+            if (pullOutput.Contains("CONFLICT") ||
+                pullOutput.Contains("conflict") ||
+                pullOutput.Contains("合并冲突"))
             {
-                var conflictFiles = ExtractConflictFiles(pullResult);
+                var conflictFiles = ExtractConflictFiles(pullOutput);
                 throw new GitConflictException(
                     $"存在 {conflictFiles.Count} 个冲突文件",
                     conflictFiles);
             }
 
             // 检查 pull 结果
-            if (pullResult.Contains("Already up to date") ||
-                pullResult.Contains("已经是最新的") ||
-                pullResult.Contains("up to date"))
+            if (pullOutput.Contains("Already up to date") ||
+                pullOutput.Contains("已经是最新的") ||
+                pullOutput.Contains("up to date"))
             {
                 result.Message = "已是最新";
             }
-            else if (!string.IsNullOrWhiteSpace(pullResult))
+            else if (!string.IsNullOrWhiteSpace(pullOutput))
             {
                 result.Message = "更新成功";
                 progress?.Report($"[{project.Name}] 更新成功");
@@ -458,7 +511,7 @@ namespace DotNetBuilder.Services
         /// <summary>
         /// 运行 Git 命令
         /// </summary>
-        private async Task<string> RunGitCommandAsync(string workingDirectory, string arguments)
+        private async Task<(string Output, int ExitCode)> RunGitCommandAsync(string workingDirectory, string arguments)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -487,14 +540,23 @@ namespace DotNetBuilder.Services
             await process.WaitForExitAsync();
 
             var result = output.ToString().Trim();
+            var errorOutput = error.ToString().Trim();
 
             // 如果 stderr 有输出但 stdout 为空，可能有错误
-            if (string.IsNullOrEmpty(result) && error.Length > 0)
+            if (string.IsNullOrEmpty(result) && !string.IsNullOrEmpty(errorOutput))
             {
-                result = error.ToString().Trim();
+                result = errorOutput;
             }
 
-            return result;
+            // 合并错误输出到结果中，便于检查
+            if (!string.IsNullOrEmpty(errorOutput))
+            {
+                result = string.IsNullOrEmpty(result)
+                    ? errorOutput
+                    : result + Environment.NewLine + errorOutput;
+            }
+
+            return (result, process.ExitCode);
         }
     }
 
