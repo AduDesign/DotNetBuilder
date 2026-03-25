@@ -264,6 +264,14 @@ namespace DotNetBuilder.ViewModels
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
+
+        [RelayCommand]
+        public void ToastLoaded(object obj)
+        {
+            if (obj is AduToastContainer container)
+                AduToastService.Initialize(container);
+        }
+
         #endregion
 
         #region 方法
@@ -328,6 +336,7 @@ namespace DotNetBuilder.ViewModels
                 ProjectListViewModel.GlobalPushOnSync = project.GlobalPushOnSync;
 
                 SelectedProject = ProjectListViewModel.Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
+                await _projectService.AddRecentProjectAsync(project.Name, filePath);
                 await WelcomeViewModel.LoadRecentProjectsAsync();
                 AppendLog($"\n========== 项目加载完成 ==========\n");
             }

@@ -136,13 +136,13 @@ namespace DotNetBuilder.Services
                 {
                     await _projectService.SaveProjectAsync(projectInfo, dialog.FileName);
                     _appendLog("\n配置已保存\n");
-                    AduMessageBox.Show("配置保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    AduToastService.ShowSuccess($"配置保存成功！", "提示"); 
                 }
             }
             catch (Exception ex)
             {
                 _appendLog($"\n保存配置失败: {ex.Message}\n");
-                AduMessageBox.Show($"保存配置失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                AduToastService.ShowError($"保存配置失败: {ex.Message}", "提示"); 
             }
         }
 

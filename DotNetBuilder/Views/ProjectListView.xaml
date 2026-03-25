@@ -120,13 +120,13 @@
                         </AduSkin:AduMenuItem>
                         <AduSkin:AduMenuItem Header="Git">
                             <AduSkin:AduMenuItem
-                                Command="{Binding CommitSingleCommand}"
-                                CommandParameter="{Binding SelectedItem}"
-                                Header="提交" />
-                            <AduSkin:AduMenuItem
                                 Command="{Binding SyncSingleCommand}"
                                 CommandParameter="{Binding SelectedItem}"
                                 Header="同步" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding CommitSingleCommand}"
+                                CommandParameter="{Binding SelectedItem}"
+                                Header="提交" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding PushProjectCommand}"
                                 CommandParameter="{Binding SelectedItem}"
@@ -463,13 +463,13 @@
                     <Grid>
                         <StackPanel Orientation="Horizontal">
                             <AduSkin:AduPathIconButton
-                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Commit}"
-                                Command="{Binding CommitSelectedCommand}"
-                                ToolTip="一键Git提交" />
-                            <AduSkin:AduPathIconButton
                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
                                 Command="{Binding SyncSelectedCommand}"
                                 ToolTip="一键Git同步" />
+                            <AduSkin:AduPathIconButton
+                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Commit}"
+                                Command="{Binding CommitSelectedCommand}"
+                                ToolTip="一键Git提交" />
                             <AduSkin:AduPathIconButton
                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Push}"
                                 AduAttach:PathDataAttach.Width="10"

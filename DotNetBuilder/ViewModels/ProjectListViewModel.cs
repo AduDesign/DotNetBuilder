@@ -67,7 +67,7 @@ namespace DotNetBuilder.ViewModels
 
         public ObservableCollection<GitProject> Projects { get; } = new();
         public ObservableCollection<MSBuildVersion> MSBuildVersions { get; } = new();
-        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Debug","Release" };
+        public ObservableCollection<string> ConfigurationTypes { get; } = new() { "Debug", "Release" };
         public ObservableCollection<string> Executables { get; } = new();
 
         public IEnumerable<GitProject> SelectedProjects => Projects.Where(p => p.IsSelected);
@@ -645,7 +645,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected && p.IsDotNetProject).ToList();
             if (!selectedProjects.Any())
             {
-                AduMessageBox.Show("请先选择要构建的.NET项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduToastService.ShowWarning("请先选择要构建的.NET项目", "提示");
                 return;
             }
 
@@ -653,7 +653,7 @@ namespace DotNetBuilder.ViewModels
             if (projectsWithoutMSBuild.Any())
             {
                 var names = string.Join(", ", projectsWithoutMSBuild.Select(p => p.Name));
-                AduMessageBox.Show($"以下项目未选择MSBuild版本:\n{names}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduToastService.ShowError($"以下项目未选择MSBuild版本:\n{names}", "提示");
                 return;
             }
 
@@ -730,7 +730,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduMessageBox.Show("请先选择要同步的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduToastService.ShowWarning("请先选择要同步的项目", "提示"); 
                 return;
             }
 
@@ -789,7 +789,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduMessageBox.Show("请先选择要推送的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduToastService.ShowWarning("请先选择要推送的项目", "提示"); 
                 return;
             }
 
@@ -858,7 +858,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduMessageBox.Show("请先选择要提交的项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                AduToastService.ShowError("请先选择要提交的项目", "提示"); 
                 return;
             }
 
@@ -867,6 +867,7 @@ namespace DotNetBuilder.ViewModels
             if (needsMessage.Any())
             {
                 var names = string.Join(", ", needsMessage.Select(p => p.Name));
+                //AduToastService.ShowError($"以下项目有未提交的更改且未勾选自动提交，请填写提交信息或勾选自动提交:\n{names}", "需要提交信息");
                 AduMessageBox.Show($"以下项目有未提交的更改且未勾选自动提交，请填写提交信息或勾选自动提交:\n{names}", "需要提交信息", MessageBoxButton.OK, MessageBoxImage.Information);
                 // 展开需要填写信息的项目
                 foreach (var p in needsMessage)
@@ -967,11 +968,12 @@ namespace DotNetBuilder.ViewModels
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    AduMessageBox.Show(
-                        $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
-                        "需要提交信息",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                    AduToastService.ShowWarning($"{project.Name} 有未提交的更改，请填写提交信息后重试。", "需要提交信息");
+                    //AduMessageBox.Show(
+                    //    $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
+                    //    "需要提交信息",
+                    //    MessageBoxButton.OK,
+                    //    MessageBoxImage.Information);
                     project.IsExpanded = true;
                     project.ErrorMessage = "请填写提交信息";
                 });

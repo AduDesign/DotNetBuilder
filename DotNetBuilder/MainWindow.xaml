@@ -6,6 +6,7 @@
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin"
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:views="clr-namespace:DotNetBuilder.Views"
+    x:Name="RootWindow"
     Title=".NET Project Builder"
     Width="1000"
     Height="700"
@@ -142,6 +143,11 @@
             </AduSkin:AduTitleMenuItem>
         </AduSkin:AduTitleMenu>
     </AduSkin:AduWindow.Menu>
+    <Interactivity:Interaction.Triggers>
+        <Interactivity:EventTrigger EventName="Loaded">
+            <Interactivity:EventToCommand Command="{Binding LoadedCommand}" CommandParameter="{Binding ElementName=RootWindow}" />
+        </Interactivity:EventTrigger>
+    </Interactivity:Interaction.Triggers>
 
     <Grid Background="{DynamicResource PanelBackground}">
         <Grid.RowDefinitions>
@@ -204,5 +210,18 @@
                     Text="处理中..." />
             </StackPanel>
         </Border>
+
+        <AduSkin:AduToastContainer
+            x:Name="ToastContainer"
+            Padding="10,0"
+            MaxToasts="8"
+            Position="TopRight"
+            ToastDuration="5000">
+            <Interactivity:Interaction.Triggers>
+                <Interactivity:EventTrigger EventName="Loaded">
+                    <Interactivity:InvokeCommandAction Command="{Binding ToastLoadedCommand}" CommandParameter="{Binding ElementName=ToastContainer}" />
+                </Interactivity:EventTrigger>
+            </Interactivity:Interaction.Triggers>
+        </AduSkin:AduToastContainer>
     </Grid>
 </AduSkin:AduWindow>
