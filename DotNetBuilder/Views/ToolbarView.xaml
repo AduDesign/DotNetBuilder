@@ -40,6 +40,12 @@
 					ToolTip="从根目录下扫描 Git 项目" />
 				<AduSkin:AduButton
 					Margin="5,0,0,0"
+					Padding="8,4"
+					Command="{Binding CloneProjectCommand}"
+					Content="克隆项目"
+					ToolTip="从 Git URL 克隆仓库" />
+				<AduSkin:AduButton
+					Margin="5,0,0,0"
 					Command="{Binding RefreshStatusCommand}"
 					Content="刷新状态" />
 				<AduSkin:AduButton

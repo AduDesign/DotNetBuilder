@@ -17,6 +17,7 @@ namespace DotNetBuilder.ViewModels
         private Func<Task>? _onAddProject;
         private Func<Task>? _onRefreshStatus;
         private Action<string>? _onScanAndAddProjects;
+        private Action? _onCloneProject;
 
         [ObservableProperty]
         private string _projectDisplayName = string.Empty;
@@ -80,6 +81,13 @@ namespace DotNetBuilder.ViewModels
         }
         private bool CanRefreshStatus() => HasProject && IsEnabled;
 
+        [RelayCommand(CanExecute = nameof(CanCloneProject))]
+        private void CloneProject()
+        {
+            _onCloneProject?.Invoke();
+        }
+        private bool CanCloneProject() => IsEnabled;
+
         /// <summary>
         /// 设置新建项目回调
         /// </summary>
@@ -104,6 +112,11 @@ namespace DotNetBuilder.ViewModels
         /// 设置扫描并添加项目回调
         /// </summary>
         public void SetOnScanAndAddProjects(Action<string> callback) => _onScanAndAddProjects = callback;
+
+        /// <summary>
+        /// 设置克隆项目回调
+        /// </summary>
+        public void SetOnCloneProject(Action callback) => _onCloneProject = callback;
 
         partial void OnHasProjectChanged(bool value)
         {

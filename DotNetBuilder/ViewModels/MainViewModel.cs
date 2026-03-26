@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
 using DotNetBuilder.Services;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 
 namespace DotNetBuilder.ViewModels
@@ -42,6 +43,7 @@ namespace DotNetBuilder.ViewModels
         public OutputViewModel OutputViewModel { get; }
         public ConflictDialogViewModel ConflictViewModel { get; }
         public NewProjectDialogViewModel NewProjectViewModel { get; }
+        public CloneDialogViewModel CloneDialogViewModel { get; }
 
         public MainViewModel()
         {
@@ -59,6 +61,7 @@ namespace DotNetBuilder.ViewModels
             ConflictViewModel = new ConflictDialogViewModel();
             ProjectListViewModel = new ProjectListViewModel(_gitService, _gitSyncService, _msbuildService, OutputViewModel, ConflictViewModel, AppendLog);
             NewProjectViewModel = new NewProjectDialogViewModel();
+            CloneDialogViewModel = new CloneDialogViewModel();
             WelcomeViewModel = new WelcomeViewModel(_projectService, _navigationService);
             ToolbarViewModel = new ToolbarViewModel(_navigationService);
 
@@ -85,6 +88,8 @@ namespace DotNetBuilder.ViewModels
             // 设置对话框回调
             ConflictViewModel.SetAppendLog(AppendLog);
             NewProjectViewModel.SetOnConfirmCallback(CreateNewProject);
+            CloneDialogViewModel.SetOnCloneCallback(CloneRepositoryAsync);
+            CloneDialogViewModel.SetOnCloneSuccessCallback(OnCloneSuccess);
 
             // 设置 ViewModel 回调
             WelcomeViewModel.SetOnNewProject(() => NewProjectViewModel.Show());
@@ -93,6 +98,7 @@ namespace DotNetBuilder.ViewModels
             ToolbarViewModel.SetOnAddProject(async () => await _lifecycleService.AddProjectAsync());
             ToolbarViewModel.SetOnRefreshStatus(async () => await _lifecycleService.RefreshStatusAsync(Projects));
             ToolbarViewModel.SetOnScanAndAddProjects(async path => await ScanAndAddProjectsAsync(path));
+            ToolbarViewModel.SetOnCloneProject(() => CloneDialogViewModel.ShowWithDefaultDirectory(SelectedPath));
 
             // 加载 MSBuild 版本
             LoadMSBuildVersions();
@@ -403,6 +409,48 @@ namespace DotNetBuilder.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task<bool> CloneRepositoryAsync(string repositoryUrl, string localDirectory, IProgress<string>? progress, CancellationToken? cancellationToken)
+        {
+            if (string.IsNullOrEmpty(repositoryUrl) || string.IsNullOrEmpty(localDirectory))
+                return false;
+
+            AppendLog($"\n========== 克隆仓库: {repositoryUrl} ==========\n");
+
+            return await _gitService.CloneRepositoryAsync(repositoryUrl, localDirectory, progress, cancellationToken);
+        }
+
+        private async void OnCloneSuccess(string repositoryUrl, string localDirectory)
+        {
+            // 添加克隆的项目到列表
+            var url = repositoryUrl.TrimEnd('/');
+            if (url.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+                url = url[..^4];
+            var repoName = Path.GetFileName(url);
+            var fullPath = Path.Combine(localDirectory, repoName);
+
+            var project = await _gitService.AddGitProjectAsync(fullPath, null);
+            if (project != null)
+            {
+                project.SolutionPath = _gitService.GetSolutionPath(fullPath);
+                project.ProjectFilePath = _gitService.GetProjectFilePath(fullPath);
+                project.SortOrder = Projects.Count;
+
+                var msbuildVersions = ProjectListViewModel.MSBuildVersions.ToList();
+                if (msbuildVersions.Count > 0)
+                    project.SelectedMSBuildVersion = msbuildVersions[0];
+
+                ProjectListViewModel.AddProject(project);
+                AppendLog($"\n已添加克隆的项目: {project.Name}\n");
+
+                // 自动保存项目
+                await SaveProjectCommand.ExecuteAsync(null);
+            }
+            else
+            {
+                AppendLog($"\n克隆成功但非 Git 项目: {fullPath}\n");
             }
         }
 

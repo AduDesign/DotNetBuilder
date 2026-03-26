@@ -192,6 +192,9 @@
         <!--  新建项目对话框  -->
         <views:NewProjectDialogView Grid.RowSpan="4" DataContext="{Binding NewProjectViewModel}" />
 
+        <!--  克隆仓库对话框  -->
+        <views:CloneDialogView Grid.RowSpan="4" DataContext="{Binding CloneDialogViewModel}" />
+
         <!--  加载中遮罩  -->
         <Border
             Grid.RowSpan="4"

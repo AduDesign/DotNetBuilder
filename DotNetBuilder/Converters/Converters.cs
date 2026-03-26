@@ -6,7 +6,63 @@ using System.Windows.Media;
 namespace DotNetBuilder.Converters
 {
     /// <summary>
-    /// 布尔值取反转换器
+    /// 布尔值取反转换器（InverseBoolConverter）
+    /// </summary>
+    public class InverseBoolConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool b)
+                return !b;
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool b)
+                return !b;
+            return value;
+        }
+    }
+
+    /// <summary>
+    /// 布尔值反向可见性转换器（true->Collapsed, false->Visible）
+    /// </summary>
+    public class InverseBoolVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool b)
+                return b ? Visibility.Collapsed : Visibility.Visible;
+            return Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 布尔值转克隆按钮文本
+    /// </summary>
+    public class BoolToTextCloneConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isCloning)
+                return isCloning ? "克隆中..." : "克隆";
+            return "克隆";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 布尔值取反转换器（别名）
     /// </summary>
     public class BoolToInverseConverter : IValueConverter
     {

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Xml.Linq;
 using DotNetBuilder.Models;
 
@@ -377,6 +378,187 @@ namespace DotNetBuilder.Services
                 return null;
 
             return info;
+        }
+
+        /// <summary>
+        /// 从 URL 克隆 Git 仓库
+        /// </summary>
+        /// <param name="repositoryUrl">仓库 URL</param>
+        /// <param name="targetDirectory">目标目录（父目录）</param>
+        /// <param name="progress">进度回调</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <returns>克隆成功返回 true，失败返回 false</returns>
+        public async Task<bool> CloneRepositoryAsync(string repositoryUrl, string targetDirectory, IProgress<string>? progress = null, CancellationToken? cancellationToken = null)
+        {
+            if (string.IsNullOrWhiteSpace(repositoryUrl))
+            {
+                progress?.Report("仓库 URL 不能为空");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(targetDirectory))
+            {
+                progress?.Report("目标目录不能为空");
+                return false;
+            }
+
+            if (!Directory.Exists(targetDirectory))
+            {
+                progress?.Report($"目标目录不存在: {targetDirectory}");
+                return false;
+            }
+
+            try
+            {
+                // 检查取消
+                if (cancellationToken?.IsCancellationRequested == true)
+                {
+                    progress?.Report("已取消克隆");
+                    return false;
+                }
+
+                // 提取仓库名称作为克隆后的文件夹名
+                var repoName = ExtractRepoName(repositoryUrl);
+                var clonePath = Path.Combine(targetDirectory, repoName);
+
+                // 检查目录是否已存在
+                if (Directory.Exists(clonePath))
+                {
+                    progress?.Report($"目录已存在: {clonePath}");
+                    return false;
+                }
+
+                progress?.Report($"正在克隆: {repositoryUrl}");
+                progress?.Report($"目标目录: {clonePath}");
+
+                // 确保目标目录有写入权限
+                try
+                {
+                    var testFile = Path.Combine(targetDirectory, ".git_clone_test_" + Guid.NewGuid().ToString("N"));
+                    File.WriteAllText(testFile, "test");
+                    File.Delete(testFile);
+                }
+                catch (Exception ex)
+                {
+                    progress?.Report($"目录权限检查失败: {ex.Message}");
+                    return false;
+                }
+
+                await RunGitCloneAsync(repositoryUrl, targetDirectory, repoName, progress, cancellationToken);
+
+                if (cancellationToken?.IsCancellationRequested == true)
+                {
+                    progress?.Report("已取消克隆");
+                    return false;
+                }
+
+                if (Directory.Exists(clonePath))
+                {
+                    progress?.Report($"克隆成功: {clonePath}");
+                    return true;
+                }
+
+                progress?.Report($"克隆失败，目录未创建");
+                return false;
+            }
+            catch (OperationCanceledException)
+            {
+                progress?.Report("已取消克隆");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                progress?.Report($"克隆异常: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 从 URL 中提取仓库名称
+        /// </summary>
+        private string ExtractRepoName(string repositoryUrl)
+        {
+            // 移除 .git 后缀
+            var url = repositoryUrl.TrimEnd('/');
+            if (url.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            {
+                url = url[..^4];
+            }
+
+            // 获取最后一段路径
+            var lastSlash = url.LastIndexOf('/');
+            if (lastSlash >= 0 && lastSlash < url.Length - 1)
+            {
+                return url[(lastSlash + 1)..];
+            }
+
+            return "repository";
+        }
+
+        /// <summary>
+        /// 运行 git clone 命令（支持进度输出和取消）
+        /// </summary>
+        private async Task RunGitCloneAsync(string repositoryUrl, string targetDirectory, string repoName, IProgress<string>? progress, CancellationToken? cancellationToken = null)
+        {
+            // 直接使用简单的 clone 命令，不带 --progress
+            var arguments = $"clone \"{repositoryUrl}\" \"{repoName}\"";
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "git",
+                Arguments = arguments,
+                WorkingDirectory = targetDirectory,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = new Process { StartInfo = startInfo };
+            var outputLines = new List<string>();
+
+            process.OutputDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                {
+                    outputLines.Add(e.Data);
+                    progress?.Report(e.Data);
+                }
+            };
+            process.ErrorDataReceived += (s, e) =>
+            {
+                if (e.Data != null)
+                {
+                    outputLines.Add("[ERROR] " + e.Data);
+                    progress?.Report(e.Data);
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            // 使用取消令牌等待
+            if (cancellationToken.HasValue)
+            {
+                await process.WaitForExitAsync(cancellationToken.Value);
+            }
+            else
+            {
+                await process.WaitForExitAsync();
+            }
+
+            // 输出最后几行（可能包含错误信息）
+            if (process.ExitCode != 0)
+            {
+                var lastLines = outputLines.TakeLast(5).ToList();
+                var errorInfo = string.Join(Environment.NewLine, lastLines);
+                progress?.Report($"克隆失败 (ExitCode: {process.ExitCode})");
+                if (!string.IsNullOrEmpty(errorInfo))
+                {
+                    progress?.Report(errorInfo);
+                }
+            }
         }
 
         /// <summary>
