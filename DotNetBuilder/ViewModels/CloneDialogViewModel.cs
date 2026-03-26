@@ -66,6 +66,8 @@ namespace DotNetBuilder.ViewModels
         {
             if (string.IsNullOrWhiteSpace(RepositoryUrl) || string.IsNullOrWhiteSpace(LocalDirectory))
                 return;
+            if (!Directory.Exists(LocalDirectory))
+                Directory.CreateDirectory(LocalDirectory);
 
             IsCloning = true;
             IsCloneSuccess = false;
