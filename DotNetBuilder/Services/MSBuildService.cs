@@ -606,7 +606,7 @@ namespace DotNetBuilder.Services
 
                 // 1. 还原 NuGet 包
                 progress?.Report($"[NuGet] 正在还原包...");
-                await RestoreNuGetPackagesAsync(msbuildPath, buildTarget, project.Path, progress);
+                await RestoreNuGetPackagesAsync(project.Name, msbuildPath, buildTarget, project.Path, progress);
 
                 // 2. 执行构建
                 string arguments;
@@ -690,7 +690,7 @@ namespace DotNetBuilder.Services
         /// <summary>
         /// 还原 NuGet 包
         /// </summary>
-        private async Task RestoreNuGetPackagesAsync(string msbuildPath, string buildTarget, string workingDirectory, IProgress<string>? progress)
+        private async Task RestoreNuGetPackagesAsync(string projectName, string msbuildPath, string buildTarget, string workingDirectory, IProgress<string>? progress)
         {
             try
             {
@@ -710,24 +710,24 @@ namespace DotNetBuilder.Services
                 if (output.Contains("Restore succeeded") || output.Contains("Restore SUCCEEDED") ||
                     output.Contains("已成功生成") || output.Contains("0 Error(s)"))
                 {
-                    progress?.Report($"[NuGet] 包还原成功");
+                    progress?.Report($"[{projectName}] [NuGet] 包还原成功");
                 }
                 else if (output.Contains("Nothing to restore"))
                 {
-                    progress?.Report($"[NuGet] 无需还原的包");
+                    progress?.Report($"[{projectName}] [NuGet] 无需还原的包");
                 }
                 else if (output.Contains("error"))
                 {
-                    progress?.Report($"[NuGet] 包还原有警告或错误，请查看上方日志");
+                    progress?.Report($"[{projectName}] [NuGet] 包还原有警告或错误，请查看上方日志");
                 }
                 else
                 {
-                    progress?.Report($"[NuGet] 包还原完成");
+                    progress?.Report($"[{projectName}] [NuGet] 包还原完成");
                 }
             }
             catch (Exception ex)
             {
-                progress?.Report($"[NuGet] 还原异常: {ex.Message}");
+                progress?.Report($"[{projectName}] [NuGet] 还原异常: {ex.Message}");
             }
         }
 
