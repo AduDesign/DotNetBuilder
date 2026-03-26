@@ -214,54 +214,6 @@ namespace DotNetBuilder.ViewModels
         }
 
         [RelayCommand]
-        private async Task BuildSingleAsync(GitProject? project)
-        {
-            if (project == null) return;
-
-            if (project.SelectedMSBuildVersion == null)
-            {
-                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
-                return;
-            }
-
-            _outputViewModel.LogOutput = string.Empty;
-            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
-
-            try
-            {
-                project.ClearError();
-                project.IsBuilding = true;
-                project.IsExpanded = true;
-
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
-                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
-
-                if (result.Success)
-                {
-                    project.IsExpanded = false;
-                    _appendLog($"[{project.Name}] 构建成功\n");
-                    _outputViewModel.ForceFlush();
-                }
-                else
-                {
-                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
-                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
-                    _outputViewModel.ForceFlush();
-                }
-            }
-            catch (Exception ex)
-            {
-                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
-                project.ErrorMessage = ex.Message;
-            }
-            finally
-            {
-                project.IsBuilding = false;
-            }
-        }
-
-        [RelayCommand]
         private async Task RunSelectedAsync(GitProject? project)
         {
             GitProject? targetProject = project ?? SelectedProject;
@@ -498,22 +450,69 @@ namespace DotNetBuilder.ViewModels
             _appendLog($"已加载 {Projects.Count} 个项目\n");
         }
 
-        #region 单项目命令
+        #region 公共操作方法
 
-        [RelayCommand]
-        private async Task SyncSingleAsync(GitProject? project)
+        /// <summary>
+        /// 执行单个项目的构建操作
+        /// </summary>
+        public async Task ExecuteBuildAsync(GitProject project, bool clearLog = true)
         {
-            if (project == null)
+            if (project.SelectedMSBuildVersion == null)
+            {
+                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
                 return;
+            }
 
-            _appendLog($"\n========== 同步项目: {project.Name} ==========\n");
+            if (clearLog)
+                _outputViewModel.LogOutput = string.Empty;
+            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
+
+            project.ClearError();
+            project.IsBuilding = true;
+            project.IsExpanded = true;
 
             try
             {
-                project.ClearError();
-                project.IsSyncing = true;
-                project.IsExpanded = true;
+                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
+                var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
+                if (result.Success)
+                {
+                    project.IsExpanded = false;
+                    _appendLog($"[{project.Name}] 构建成功\n");
+                }
+                else
+                {
+                    project.ErrorMessage = result.ErrorMessage ?? "构建失败";
+                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                }
+                _outputViewModel.ForceFlush();
+            }
+            catch (Exception ex)
+            {
+                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
+                project.ErrorMessage = ex.Message;
+            }
+            finally
+            {
+                project.IsBuilding = false;
+            }
+        }
+
+        /// <summary>
+        /// 执行单个项目的同步操作
+        /// </summary>
+        public async Task ExecuteSyncAsync(GitProject project)
+        {
+            _appendLog($"\n========== 同步项目: {project.Name} ==========\n");
+
+            project.ClearError();
+            project.IsSyncing = true;
+            project.IsExpanded = true;
+
+            try
+            {
                 var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
                 var options = GetSyncOptions();
 
@@ -533,20 +532,19 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        [RelayCommand]
-        private async Task PushProjectAsync(GitProject? project)
+        /// <summary>
+        /// 执行单个项目的推送操作
+        /// </summary>
+        public async Task ExecutePushAsync(GitProject project)
         {
-            if (project == null)
-                return;
-
             _appendLog($"\n========== 推送项目: {project.Name} ==========\n");
+
+            project.ClearError();
+            project.IsSyncing = true;
+            project.IsExpanded = true;
 
             try
             {
-                project.ClearError();
-                project.IsSyncing = true;
-                project.IsExpanded = true;
-
                 var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
                 var success = await _gitSyncService.PushProjectAsync(project, progress);
 
@@ -572,20 +570,19 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
-        [RelayCommand]
-        private async Task CommitSingleAsync(GitProject? project)
+        /// <summary>
+        /// 执行单个项目的提交操作
+        /// </summary>
+        public async Task ExecuteCommitAsync(GitProject project)
         {
-            if (project == null)
-                return;
-
             _appendLog($"\n========== 提交项目: {project.Name} ==========\n");
+
+            project.ClearError();
+            project.IsCommitting = true;
+            project.IsExpanded = true;
 
             try
             {
-                project.ClearError();
-                project.IsCommitting = true;
-                project.IsExpanded = true;
-
                 var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
 
                 var result = await _gitSyncService.CommitProjectAsync(
@@ -598,7 +595,7 @@ namespace DotNetBuilder.ViewModels
                 {
                     if (result.HasCommit)
                     {
-                        project.CommitMessage = ""; // 提交成功后清空
+                        project.CommitMessage = "";
                         _appendLog($"[{project.Name}] 提交完成\n");
                     }
                     else
@@ -621,7 +618,6 @@ namespace DotNetBuilder.ViewModels
                     }
                 }
 
-                // 更新远程状态
                 await _gitService.UpdateProjectStatusAsync(project);
             }
             catch (Exception ex)
@@ -637,7 +633,39 @@ namespace DotNetBuilder.ViewModels
 
         #endregion
 
-        #region 一键命令
+        #region 单项目命令
+
+        [RelayCommand]
+        private async Task BuildSingleAsync(GitProject? project)
+        {
+            if (project == null) return;
+            await ExecuteBuildAsync(project);
+        }
+
+        [RelayCommand]
+        private async Task SyncSingleAsync(GitProject? project)
+        {
+            if (project == null) return;
+            await ExecuteSyncAsync(project);
+        }
+
+        [RelayCommand]
+        private async Task PushProjectAsync(GitProject? project)
+        {
+            if (project == null) return;
+            await ExecutePushAsync(project);
+        }
+
+        [RelayCommand]
+        private async Task CommitSingleAsync(GitProject? project)
+        {
+            if (project == null) return;
+            await ExecuteCommitAsync(project);
+        }
+
+        #endregion
+
+        #region 一键命令（批量操作）
 
         [RelayCommand(CanExecute = nameof(CanBuildSelected))]
         private async Task BuildSelectedAsync()
@@ -673,47 +701,12 @@ namespace DotNetBuilder.ViewModels
                         continue;
                     }
 
-                    await Application.Current.Dispatcher.InvokeAsync(() => project.ClearError());
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        project.IsBuilding = true;
-                        project.IsExpanded = true;
-                    });
+                    await ExecuteBuildAsync(project, clearLog: false);
 
-                    try
+                    // 检查是否有错误
+                    if (!string.IsNullOrEmpty(project.ErrorMessage))
                     {
-                        var progress = new Progress<string>(msg => _appendLog(msg + "\n"));
-                        _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion?.DisplayName}, 配置: {project.Configuration}\n");
-                        var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
-
-                        if (result.Success)
-                        {
-                            await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
-                        }
-                        else
-                        {
-                            _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
-                            buildFailed = true;
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                            {
-                                project.ErrorMessage = result.ErrorMessage ?? "构建失败";
-                                project.IsExpanded = true;
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
                         buildFailed = true;
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            project.ErrorMessage = ex.Message;
-                            project.IsExpanded = true;
-                        });
-                    }
-                    finally
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsBuilding = false);
                     }
                 }
 
@@ -733,7 +726,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduToastService.ShowWarning("请先选择要同步的项目", "提示"); 
+                AduToastService.ShowWarning("请先选择要同步的项目", "提示");
                 return;
             }
 
@@ -742,40 +735,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var tasks = selectedProjects.Select(async project =>
-                {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        project.ClearError();
-                        project.IsSyncing = true;
-                        project.IsExpanded = true;
-                    });
-
-                    try
-                    {
-                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                        var options = GetSyncOptions();
-
-                        await _gitService.UpdateProjectStatusAsync(project);
-                        var result = await _gitSyncService.SyncProjectAsync(project, project.CommitMessage, options, progress);
-
-                        await HandleSyncResultAsync(project, result, progress);
-                    }
-                    catch (Exception ex)
-                    {
-                        _appendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            project.ErrorMessage = ex.Message;
-                            project.IsExpanded = true;
-                        });
-                    }
-                    finally
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
-                    }
-                });
-
+                var tasks = selectedProjects.Select(project => ExecuteSyncAsync(project));
                 await Task.WhenAll(tasks);
                 _appendLog($"\n========== 同步完成 ==========\n");
             }
@@ -792,7 +752,7 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduToastService.ShowWarning("请先选择要推送的项目", "提示"); 
+                AduToastService.ShowWarning("请先选择要推送的项目", "提示");
                 return;
             }
 
@@ -801,50 +761,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var tasks = selectedProjects.Select(async project =>
-                {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        project.ClearError();
-                        project.IsSyncing = true;
-                        project.IsExpanded = true;
-                    });
-
-                    try
-                    {
-                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                        var success = await _gitSyncService.PushProjectAsync(project, progress);
-
-                        if (success)
-                        {
-                            await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
-                            _appendLog($"[{project.Name}] 推送成功\n");
-                        }
-                        else
-                        {
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                            {
-                                project.ErrorMessage = "推送失败";
-                                project.IsExpanded = true;
-                            });
-                            _appendLog($"[{project.Name}] 推送失败\n");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _appendLog($"[{project.Name}] 推送异常: {ex.Message}\n");
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            project.ErrorMessage = ex.Message;
-                            project.IsExpanded = true;
-                        });
-                    }
-                    finally
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsSyncing = false);
-                    }
-                });
-
+                var tasks = selectedProjects.Select(project => ExecutePushAsync(project));
                 await Task.WhenAll(tasks);
                 _appendLog($"\n========== 推送完成 ==========\n");
             }
@@ -861,18 +778,15 @@ namespace DotNetBuilder.ViewModels
             var selectedProjects = Projects.Where(p => p.IsSelected).ToList();
             if (!selectedProjects.Any())
             {
-                AduToastService.ShowError("请先选择要提交的项目", "提示"); 
+                AduToastService.ShowError("请先选择要提交的项目", "提示");
                 return;
             }
 
-            // 检查是否有需要填写提交信息的项目
             var needsMessage = selectedProjects.Where(p => p.HasChanges && string.IsNullOrWhiteSpace(p.CommitMessage) && !p.AutoCommitWhenNoMessage).ToList();
             if (needsMessage.Any())
             {
                 var names = string.Join(", ", needsMessage.Select(p => p.Name));
-                //AduToastService.ShowError($"以下项目有未提交的更改且未勾选自动提交，请填写提交信息或勾选自动提交:\n{names}", "需要提交信息");
                 AduMessageBox.Show($"以下项目有未提交的更改且未勾选自动提交，请填写提交信息或勾选自动提交:\n{names}", "需要提交信息", MessageBoxButton.OK, MessageBoxImage.Information);
-                // 展开需要填写信息的项目
                 foreach (var p in needsMessage)
                     p.IsExpanded = true;
                 return;
@@ -883,70 +797,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var tasks = selectedProjects.Select(async project =>
-                {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
-                    {
-                        project.ClearError();
-                        project.IsCommitting = true;
-                        project.IsExpanded = true;
-                    });
-
-                    try
-                    {
-                        var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-
-                        var result = await _gitSyncService.CommitProjectAsync(
-                            project,
-                            project.CommitMessage,
-                            project.AutoCommitWhenNoMessage,
-                            progress);
-
-                        if (result.Success)
-                        {
-                            if (result.HasCommit)
-                            {
-                                await Application.Current.Dispatcher.InvokeAsync(() =>
-                                {
-                                    project.CommitMessage = "";
-                                    project.IsExpanded = false;
-                                });
-                                _appendLog($"[{project.Name}] 提交完成\n");
-                            }
-                            else
-                            {
-                                _appendLog($"[{project.Name}] {result.Message}\n");
-                                await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
-                            }
-                        }
-                        else
-                        {
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
-                            {
-                                project.ErrorMessage = result.Message;
-                                project.IsExpanded = true;
-                            });
-                            _appendLog($"[{project.Name}] 提交失败: {result.Message}\n");
-                        }
-
-                        // 更新状态
-                        await _gitService.UpdateProjectStatusAsync(project);
-                    }
-                    catch (Exception ex)
-                    {
-                        _appendLog($"[{project.Name}] 提交异常: {ex.Message}\n");
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            project.ErrorMessage = ex.Message;
-                            project.IsExpanded = true;
-                        });
-                    }
-                    finally
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() => project.IsCommitting = false);
-                    }
-                });
-
+                var tasks = selectedProjects.Select(project => ExecuteCommitAsync(project));
                 await Task.WhenAll(tasks);
                 _appendLog($"\n========== 提交完成 ==========\n");
             }
@@ -972,11 +823,6 @@ namespace DotNetBuilder.ViewModels
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     AduToastService.ShowWarning($"{project.Name} 有未提交的更改，请填写提交信息后重试。", "需要提交信息");
-                    //AduMessageBox.Show(
-                    //    $"{project.Name} 有未提交的更改，请填写提交信息后重试。",
-                    //    "需要提交信息",
-                    //    MessageBoxButton.OK,
-                    //    MessageBoxImage.Information);
                     project.IsExpanded = true;
                     project.ErrorMessage = "请填写提交信息";
                 });
