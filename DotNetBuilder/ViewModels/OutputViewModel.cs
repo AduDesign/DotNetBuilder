@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DotNetBuilder.Models;
@@ -50,6 +52,12 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private bool _globalAutoCommitWhenNoMessage = false;
 
+        // 日志缓冲，用于批量更新
+        private readonly StringBuilder _logBuffer = new();
+        private readonly DispatcherTimer _flushTimer;
+        private bool _isDirty;
+        private readonly object _lockObj = new();
+
         public ObservableCollection<PullStrategy> PullStrategies { get; }
         public ObservableCollection<ConflictAction> ConflictActions { get; }
 
@@ -69,11 +77,24 @@ namespace DotNetBuilder.ViewModels
                 ConflictAction.AutoStash,
                 ConflictAction.Abort
             };
+
+            // 使用定时器批量刷新日志，50ms 刷新一次
+            _flushTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(50)
+            };
+            _flushTimer.Tick += (s, e) => FlushLog();
+            _flushTimer.Start();
         }
 
         [RelayCommand]
         private void ClearLog()
         {
+            lock (_lockObj)
+            {
+                _logBuffer.Clear();
+                _isDirty = true;
+            }
             LogOutput = string.Empty;
         }
 
@@ -84,12 +105,22 @@ namespace DotNetBuilder.ViewModels
             AutoCommitWhenNoMessage = GlobalAutoCommitWhenNoMessage
         };
 
+        /// <summary>
+        /// 追加日志到缓冲区，使用批量更新避免频繁 UI 刷新
+        /// </summary>
         public void AppendLog(string message)
         {
+            if (string.IsNullOrEmpty(message))
+                return;
+
             // 分隔符标题始终显示
             if (message.Contains("=========="))
             {
-                LogOutput += message;
+                lock (_lockObj)
+                {
+                    _logBuffer.Append(message);
+                    _isDirty = true;
+                }
                 return;
             }
 
@@ -106,8 +137,46 @@ namespace DotNetBuilder.ViewModels
 
             if (shouldShow)
             {
-                LogOutput += message;
+                lock (_lockObj)
+                {
+                    _logBuffer.Append(message);
+                    _isDirty = true;
+                }
             }
+        }
+
+        /// <summary>
+        /// 强制刷新缓冲区到 UI（立即显示所有待处理的日志）
+        /// </summary>
+        public void ForceFlush()
+        {
+            FlushLog();
+        }
+
+        /// <summary>
+        /// 批量刷新日志到 UI
+        /// </summary>
+        private void FlushLog()
+        {
+            if (!_isDirty)
+                return;
+
+            string toAppend;
+            lock (_lockObj)
+            {
+                if (_logBuffer.Length == 0)
+                {
+                    _isDirty = false;
+                    return;
+                }
+
+                toAppend = _logBuffer.ToString();
+                _logBuffer.Clear();
+                _isDirty = false;
+            }
+
+            // 批量追加到现有输出
+            LogOutput += toAppend;
         }
 
         private LogType ClassifyLogType(string message)

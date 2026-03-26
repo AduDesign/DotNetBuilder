@@ -33,6 +33,7 @@ namespace DotNetBuilder.Services
                 if (fetchExitCode != 0)
                 {
                     // Fetch 失败，可能是网络问题
+                    info.FetchFailed = true;
                     info.HasRemoteChanges = true;
                     return info;
                 }
@@ -82,10 +83,10 @@ namespace DotNetBuilder.Services
                     pushResult.Contains("Permission denied") ||
                     pushResult.Contains("Authentication"))
                 {
-                    progress?.Report($"[{project.Name}] Push失败: {pushResult}");
+                    progress?.Report($"Push失败: {pushResult}");
                     return false;
                 }
-                progress?.Report($"[{project.Name}] Push成功");
+                progress?.Report("Push成功");
                 return true;
             }
             catch (Exception ex)
@@ -116,12 +117,12 @@ namespace DotNetBuilder.Services
                 {
                     result.Success = true;
                     result.Message = "无需提交（没有更改）";
-                    progress?.Report($"[{project.Name}] 没有需要提交的更改");
+                    progress?.Report("没有需要提交的更改");
                     return result;
                 }
 
                 var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
-                progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改");
+                progress?.Report($"发现 {changesCount} 个文件有更改");
 
                 // 2. 决定是否提交
                 if (string.IsNullOrWhiteSpace(commitMessage))
@@ -129,7 +130,7 @@ namespace DotNetBuilder.Services
                     if (autoCommitWhenNoMessage)
                     {
                         commitMessage = $"Sync changes {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
-                        progress?.Report($"[{project.Name}] 未填写提交信息，使用默认: {commitMessage}");
+                        progress?.Report($"未填写提交信息，使用默认: {commitMessage}");
                     }
                     else
                     {
@@ -141,11 +142,11 @@ namespace DotNetBuilder.Services
                 }
 
                 // 3. git add .
-                progress?.Report($"[{project.Name}] 暂存更改...");
+                progress?.Report("暂存更改...");
                 await RunGitCommandAsync(project.Path, "add .");
 
                 // 4. git commit
-                progress?.Report($"[{project.Name}] 提交更改: {commitMessage}");
+                progress?.Report($"提交更改: {commitMessage}");
                 var escapedMessage = commitMessage.Replace("\"", "\\\"");
                 var (commitResult, commitExitCode) = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
 
@@ -156,27 +157,27 @@ namespace DotNetBuilder.Services
                     result.CommitMessage = commitMessage;
                     result.Success = true;
                     result.Message = "提交成功";
-                    progress?.Report($"[{project.Name}] 提交成功: {commitMessage}");
+                    progress?.Report($"提交成功: {commitMessage}");
                 }
                 else if (commitExitCode != 0)
                 {
                     result.Success = false;
                     result.Message = $"提交失败: {commitResult}";
-                    progress?.Report($"[{project.Name}] 提交失败: {commitResult}");
+                    progress?.Report($"提交失败: {commitResult}");
                     return result;
                 }
                 else
                 {
                     result.Success = true;
                     result.Message = "无需提交";
-                    progress?.Report($"[{project.Name}] 没有新的提交");
+                    progress?.Report("没有新的提交");
                 }
             }
             catch (Exception ex)
             {
                 result.Success = false;
                 result.Message = $"提交失败: {ex.Message}";
-                progress?.Report($"[{project.Name}] 提交异常: {ex.Message}");
+                progress?.Report($"提交异常: {ex.Message}");
             }
 
             return result;
@@ -234,13 +235,13 @@ namespace DotNetBuilder.Services
                     if (hasLocalChanges)
                     {
                         var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
-                        progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改（跳过提交）");
+                        progress?.Report($"发现 {changesCount} 个文件有更改（跳过提交）");
                     }
                 }
                 else if (hasLocalChanges)
                 {
                     var changesCount = statusResult.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
-                    progress?.Report($"[{project.Name}] 发现 {changesCount} 个文件有更改");
+                    progress?.Report($"发现 {changesCount} 个文件有更改");
 
                     // 决定是否提交
                     if (string.IsNullOrWhiteSpace(commitMessage))
@@ -262,11 +263,11 @@ namespace DotNetBuilder.Services
                     }
 
                     // 2. git add .
-                    progress?.Report($"[{project.Name}] 暂存更改...");
+                    progress?.Report("暂存更改...");
                     await RunGitCommandAsync(project.Path, "add .");
 
                     // 3. git commit
-                    progress?.Report($"[{project.Name}] 提交更改: {commitMessage}");
+                    progress?.Report($"提交更改: {commitMessage}");
                     var escapedMessage = commitMessage.Replace("\"", "\\\"");
                     var (commitResult, commitExitCode) = await RunGitCommandAsync(project.Path, $"commit -m \"{escapedMessage}\"");
 
@@ -279,8 +280,14 @@ namespace DotNetBuilder.Services
                 }
 
                 // 4. 检查远程状态
-                progress?.Report($"[{project.Name}] 检查远程状态...");
+                progress?.Report("检查远程状态...");
                 result.RemoteStatus = await GetRemoteStatusAsync(project);
+
+                // 如果 fetch 失败（网络问题），提示用户
+                if (result.RemoteStatus.FetchFailed)
+                {
+                    progress?.Report("警告：无法连接到远程服务器，网络可能不可用");
+                }
 
                 // 5. 根据策略执行 pull
                 if (options.PullStrategy == PullStrategy.CommitOnly)
@@ -302,7 +309,7 @@ namespace DotNetBuilder.Services
                 // 7. 执行 push（如果启用）
                 if (options.PushOnSync)
                 {
-                    progress?.Report($"[{project.Name}] 推送到远程...");
+                    progress?.Report("推送到远程...");
                     var pushPushResult = await PushProjectAsync(project, progress);
                     if (!pushPushResult)
                     {
@@ -348,7 +355,7 @@ namespace DotNetBuilder.Services
                 {
                     case ConflictAction.Abort:
                         // 放弃 pull，恢复状态
-                        progress?.Report($"[{project.Name}] 放弃 pull，恢复本地状态...");
+                        progress?.Report("放弃 pull，恢复本地状态...");
                         await RunGitCommandAsync(project.Path, "merge --abort");
                         result.Success = true;
                         result.Message = "已放弃 pull，保留本地状态";
@@ -356,9 +363,9 @@ namespace DotNetBuilder.Services
 
                     case ConflictAction.AutoStash:
                         // 自动 stash
-                        progress?.Report($"[{project.Name}] 尝试自动 stash 后 pull...");
+                        progress?.Report("尝试自动 stash 后 pull...");
                         var (stashResult, _) = await RunGitCommandAsync(project.Path, "stash push -m \"DotNetBuilder auto stash\"");
-                        progress?.Report($"[{project.Name}] stash 结果: {stashResult}");
+                        progress?.Report($"stash 结果: {stashResult}");
 
                         // 执行 pull
                         var pullSuccess = await ExecutePullAsync(project, new SyncOptions(), progress, result);
@@ -412,7 +419,7 @@ namespace DotNetBuilder.Services
             IProgress<string>? progress,
             GitSyncResult result)
         {
-            progress?.Report($"[{project.Name}] 正在拉取更新...");
+            progress?.Report("正在拉取更新...");
 
             string pullArgs = options.PullStrategy switch
             {
@@ -435,14 +442,14 @@ namespace DotNetBuilder.Services
                     pullOutput.Contains("Permission denied") ||
                     pullOutput.Contains("fatal"))
                 {
-                    progress?.Report($"[{project.Name}] 拉取失败（网络错误）: {pullOutput}");
+                    progress?.Report($"拉取失败（网络错误）: {pullOutput}");
                     result.Success = false;
                     result.Message = $"拉取失败: {pullOutput}";
                     return false;
                 }
 
                 // 其他错误
-                progress?.Report($"[{project.Name}] 拉取失败: {pullOutput}");
+                progress?.Report($"拉取失败: {pullOutput}");
                 result.Success = false;
                 result.Message = $"拉取失败: {pullOutput}";
                 return false;
@@ -469,7 +476,7 @@ namespace DotNetBuilder.Services
             else if (!string.IsNullOrWhiteSpace(pullOutput))
             {
                 result.Message = "更新成功";
-                progress?.Report($"[{project.Name}] 更新成功");
+                progress?.Report("更新成功");
             }
 
             return true;

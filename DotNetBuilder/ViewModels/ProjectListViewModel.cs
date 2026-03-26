@@ -241,11 +241,13 @@ namespace DotNetBuilder.ViewModels
                 {
                     project.IsExpanded = false;
                     _appendLog($"[{project.Name}] 构建成功\n");
+                    _outputViewModel.ForceFlush();
                 }
                 else
                 {
                     project.ErrorMessage = result.ErrorMessage ?? "构建失败";
                     _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                    _outputViewModel.ForceFlush();
                 }
             }
             catch (Exception ex)
@@ -716,6 +718,7 @@ namespace DotNetBuilder.ViewModels
                 }
 
                 _appendLog($"\n========== 构建完成 ==========\n");
+                _outputViewModel.ForceFlush();
             }
             finally
             {

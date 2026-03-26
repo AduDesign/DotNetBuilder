@@ -135,6 +135,11 @@ namespace DotNetBuilder.Models
         public int LocalAheadCount { get; set; }
 
         /// <summary>
+        /// Fetch 操作是否失败（网络问题）
+        /// </summary>
+        public bool FetchFailed { get; set; }
+
+        /// <summary>
         /// 需要 merge 还是 rebase
         /// </summary>
         public bool NeedsMerge => HasRemoteChanges && HasLocalUnpushedChanges;
