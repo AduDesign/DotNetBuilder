@@ -13,11 +13,12 @@ namespace DotNetBuilder.Services
     {
         private readonly GitService _gitService;
         private readonly ProjectService _projectService;
-        private readonly Action<string> _appendLog;
-        private readonly Func<bool> _hasProject;
-        private readonly Func<ProjectListViewModel> _getProjectListViewModel;
-        private readonly Func<NewProjectDialogViewModel> _getNewProjectDialogViewModel;
-        private readonly Func<string> _getSelectedPath;
+        private readonly OutputViewModel _outputViewModel;
+        private readonly ProjectListViewModel _projectListViewModel;
+        private readonly NewProjectDialogViewModel _newProjectDialogViewModel;
+
+        public string SelectedPath { get; set; } = string.Empty;
+        public bool HasProject => _projectService.CurrentProject != null;
 
         public event Action<ProjectInfo>? OnProjectLoaded;
         public event Action? OnProjectClosed;
@@ -25,32 +26,29 @@ namespace DotNetBuilder.Services
         public ProjectLifecycleService(
             GitService gitService,
             ProjectService projectService,
-            Action<string> appendLog,
-            Func<bool> hasProject,
-            Func<ProjectListViewModel> getProjectListViewModel,
-            Func<NewProjectDialogViewModel> getNewProjectDialogViewModel,
-            Func<string> getSelectedPath)
+            OutputViewModel outputViewModel,
+            ProjectListViewModel projectListViewModel,
+            NewProjectDialogViewModel newProjectDialogViewModel)
         {
             _gitService = gitService;
             _projectService = projectService;
-            _appendLog = appendLog;
-            _hasProject = hasProject;
-            _getProjectListViewModel = getProjectListViewModel;
-            _getNewProjectDialogViewModel = getNewProjectDialogViewModel;
-            _getSelectedPath = getSelectedPath;
+            _outputViewModel = outputViewModel;
+            _projectListViewModel = projectListViewModel;
+            _newProjectDialogViewModel = newProjectDialogViewModel;
 
             // 订阅 ProjectService 事件
             _projectService.OnProjectLoaded += info => OnProjectLoaded?.Invoke(info);
             _projectService.OnProjectClosed += () => OnProjectClosed?.Invoke();
         }
 
+        private void AppendLog(string message) => _outputViewModel.AppendLog(message);
+
         /// <summary>
         /// 创建新项目
         /// </summary>
         public void CreateNewProject(string name, string rootPath)
         {
-            var projectList = _getProjectListViewModel();
-            projectList.ClearProjects();
+            _projectListViewModel.ClearProjects();
 
             var project = _projectService.CreateProject(name, rootPath);
             _projectService.SetCurrentProject(project);
@@ -65,37 +63,36 @@ namespace DotNetBuilder.Services
         {
             if (!File.Exists(filePath))
             {
-                _appendLog($"项目文件不存在: {filePath}\n");
+                AppendLog($"项目文件不存在: {filePath}\n");
                 return;
             }
 
-            _appendLog($"\n========== 打开项目: {filePath} ==========\n");
+            AppendLog($"\n========== 打开项目: {filePath} ==========\n");
 
             var project = await _projectService.OpenProjectAsync(filePath);
             if (project == null)
             {
-                _appendLog("项目加载失败\n");
+                AppendLog("项目加载失败\n");
                 return;
             }
 
             _projectService.SetCurrentProject(project);
 
-            var projectList = _getProjectListViewModel();
-            projectList.ClearProjects();
+            _projectListViewModel.ClearProjects();
 
             try
             {
                 // 加载保存的项目配置（不再重新扫描，避免把已删除的项目加回来）
-                await projectList.LoadSavedProjectsAsync(project.Projects);
+                await _projectListViewModel.LoadSavedProjectsAsync(project.Projects);
 
                 // 添加到最近项目
                 await _projectService.AddRecentProjectAsync(project.Name, filePath);
 
-                _appendLog($"\n========== 项目加载完成 ==========\n");
+                AppendLog($"\n========== 项目加载完成 ==========\n");
             }
             catch (Exception ex)
             {
-                _appendLog($"加载项目时出错: {ex.Message}\n");
+                AppendLog($"加载项目时出错: {ex.Message}\n");
             }
         }
 
@@ -135,14 +132,14 @@ namespace DotNetBuilder.Services
                 if (dialog.ShowDialog() == true)
                 {
                     await _projectService.SaveProjectAsync(projectInfo, dialog.FileName);
-                    _appendLog("\n配置已保存\n");
-                    AduToastService.ShowSuccess($"配置保存成功！", "提示"); 
+                    AppendLog("\n配置已保存\n");
+                    AduToastService.ShowSuccess($"配置保存成功！", "提示");
                 }
             }
             catch (Exception ex)
             {
-                _appendLog($"\n保存配置失败: {ex.Message}\n");
-                AduToastService.ShowError($"保存配置失败: {ex.Message}", "提示"); 
+                AppendLog($"\n保存配置失败: {ex.Message}\n");
+                AduToastService.ShowError($"保存配置失败: {ex.Message}", "提示");
             }
         }
 
@@ -160,17 +157,16 @@ namespace DotNetBuilder.Services
                 return;
 
             var projectPath = dialog.FolderName;
-            var projectList = _getProjectListViewModel();
 
-            if (projectList.Projects.Any(p => p.Path.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
+            if (_projectListViewModel.Projects.Any(p => p.Path.Equals(projectPath, StringComparison.OrdinalIgnoreCase)))
             {
                 AduMessageBox.Show("该项目已在列表中", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            _appendLog($"\n正在添加项目: {projectPath}\n");
+            AppendLog($"\n正在添加项目: {projectPath}\n");
 
-            await projectList.AddSingleProjectAsync(projectPath);
+            await _projectListViewModel.AddSingleProjectAsync(projectPath);
         }
 
         /// <summary>
@@ -178,14 +174,14 @@ namespace DotNetBuilder.Services
         /// </summary>
         public async Task RefreshStatusAsync(IEnumerable<GitProject> projects)
         {
-            _appendLog("\n正在刷新项目状态...\n");
+            AppendLog("\n正在刷新项目状态...\n");
 
             foreach (var project in projects)
             {
                 await _gitService.UpdateProjectStatusAsync(project);
             }
 
-            _appendLog("状态刷新完成\n");
+            AppendLog("状态刷新完成\n");
         }
 
         /// <summary>
@@ -201,14 +197,12 @@ namespace DotNetBuilder.Services
         /// </summary>
         private async Task ScanProjectsAsync()
         {
-            var rootPath = _getSelectedPath();
-            if (string.IsNullOrEmpty(rootPath))
+            if (string.IsNullOrEmpty(SelectedPath))
                 return;
 
-            var projectList = _getProjectListViewModel();
-            projectList.ClearProjects();
+            _projectListViewModel.ClearProjects();
 
-            await projectList.ScanProjectsAsync(rootPath);
+            await _projectListViewModel.ScanProjectsAsync(SelectedPath);
         }
     }
 }

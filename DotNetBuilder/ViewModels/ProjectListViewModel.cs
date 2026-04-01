@@ -18,7 +18,6 @@ namespace DotNetBuilder.ViewModels
         private readonly MSBuildService _msbuildService;
         private readonly OutputViewModel _outputViewModel;
         private readonly ConflictDialogViewModel _conflictViewModel;
-        private readonly Action<string> _appendLog;
 
         [ObservableProperty]
         private bool _isBusy;
@@ -77,16 +76,16 @@ namespace DotNetBuilder.ViewModels
             GitSyncService gitSyncService,
             MSBuildService msbuildService,
             OutputViewModel outputViewModel,
-            ConflictDialogViewModel conflictViewModel,
-            Action<string> appendLog)
+            ConflictDialogViewModel conflictViewModel)
         {
             _gitService = gitService;
             _gitSyncService = gitSyncService;
             _msbuildService = msbuildService;
             _outputViewModel = outputViewModel;
             _conflictViewModel = conflictViewModel;
-            _appendLog = appendLog;
         }
+
+        private void AppendLog(string message) => _outputViewModel.AppendLog(message);
 
         partial void OnSelectedProjectChanged(GitProject? value)
         {
@@ -137,7 +136,7 @@ namespace DotNetBuilder.ViewModels
             project.IsSelected = false;
             project.IsRemoved = true;
             Projects.Remove(project);
-            _appendLog($"已移除项目: {project.Name}\n");
+            AppendLog($"已移除项目: {project.Name}\n");
 
             if (SelectedProject == project)
                 SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
@@ -159,7 +158,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"打开文件夹失败: {ex.Message}\n");
+                AppendLog($"打开文件夹失败: {ex.Message}\n");
             }
         }
 
@@ -176,7 +175,7 @@ namespace DotNetBuilder.ViewModels
 
                 if (string.IsNullOrEmpty(targetPath))
                 {
-                    _appendLog($"[{project.Name}] 未找到解决方案或项目文件\n");
+                    AppendLog($"[{project.Name}] 未找到解决方案或项目文件\n");
                     return;
                 }
 
@@ -189,7 +188,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"用 VisualStudio 打开失败: {ex.Message}\n");
+                AppendLog($"用 VisualStudio 打开失败: {ex.Message}\n");
             }
         }
 
@@ -209,7 +208,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"用 VSCode 打开失败: {ex.Message}\n");
+                AppendLog($"用 VSCode 打开失败: {ex.Message}\n");
             }
         }
 
@@ -219,18 +218,18 @@ namespace DotNetBuilder.ViewModels
             GitProject? targetProject = project ?? SelectedProject;
             if (targetProject == null || string.IsNullOrEmpty(targetProject.ExecuteFile))
             {
-                _appendLog("无可运行的项目\n");
+                AppendLog("无可运行的项目\n");
                 return;
             }
 
-            _appendLog($"\n========== 运行项目: {targetProject.Name} ==========\n");
+            AppendLog($"\n========== 运行项目: {targetProject.Name} ==========\n");
 
             try
             {
                 var exePath = targetProject.ExecuteFile;
                 var workingDir = System.IO.Path.GetDirectoryName(exePath) ?? targetProject.Path;
 
-                _appendLog($"[{targetProject.Name}] 启动: {exePath}\n");
+                AppendLog($"[{targetProject.Name}] 启动: {exePath}\n");
 
                 var processStartInfo = new System.Diagnostics.ProcessStartInfo
                 {
@@ -243,7 +242,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"[{targetProject.Name}] 运行失败: {ex.Message}\n");
+                AppendLog($"[{targetProject.Name}] 运行失败: {ex.Message}\n");
             }
         }
 
@@ -319,11 +318,11 @@ namespace DotNetBuilder.ViewModels
 
         public async Task ScanProjectsAsync(string path)
         {
-            _appendLog($"正在扫描: {path}\n");
+            AppendLog($"正在扫描: {path}\n");
 
             try
             {
-                var progress = new Progress<string>(msg => _appendLog(msg + "\n"));
+                var progress = new Progress<string>(msg => AppendLog(msg + "\n"));
                 var projects = await _gitService.ScanGitProjectsAsync(path, progress);
 
                 int sortOrder = 0;
@@ -343,27 +342,27 @@ namespace DotNetBuilder.ViewModels
 
                 SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
 
-                _appendLog($"\n扫描完成，发现 {projects.Count} 个Git项目\n");
+                AppendLog($"\n扫描完成，发现 {projects.Count} 个Git项目\n");
                 if (projects.Count > 0)
                 {
                     var dotnetCount = projects.Count(p => p.IsDotNetProject);
-                    _appendLog($"其中 {dotnetCount} 个是.NET项目\n");
+                    AppendLog($"其中 {dotnetCount} 个是.NET项目\n");
                 }
             }
             catch (Exception ex)
             {
-                _appendLog($"\n扫描失败: {ex.Message}\n");
+                AppendLog($"\n扫描失败: {ex.Message}\n");
             }
         }
 
         public async Task AddSingleProjectAsync(string projectPath)
         {
-            var progress = new Progress<string>(msg => _appendLog(msg + "\n"));
+            var progress = new Progress<string>(msg => AppendLog(msg + "\n"));
             var project = await _gitService.AddGitProjectAsync(projectPath, progress);
 
             if (project == null)
             {
-                _appendLog("添加失败: 所选目录不是Git项目目录\n");
+                AppendLog("添加失败: 所选目录不是Git项目目录\n");
                 return;
             }
 
@@ -377,7 +376,7 @@ namespace DotNetBuilder.ViewModels
             project.SelectedMSBuildVersion = matched ?? MSBuildVersions.FirstOrDefault();
 
             AddProject(project);
-            _appendLog($"已添加项目: {project.Name}\n");
+            AppendLog($"已添加项目: {project.Name}\n");
         }
 
         /// <summary>
@@ -385,7 +384,7 @@ namespace DotNetBuilder.ViewModels
         /// </summary>
         public async Task LoadSavedProjectsAsync(IEnumerable<Models.ProjectConfig> savedProjects)
         {
-            _appendLog("正在加载保存的项目配置...\n");
+            AppendLog("正在加载保存的项目配置...\n");
 
             var msbuildVersionsList = MSBuildVersions.ToList();
 
@@ -394,7 +393,7 @@ namespace DotNetBuilder.ViewModels
                 // 检查路径是否存在
                 if (!System.IO.Directory.Exists(config.Path))
                 {
-                    _appendLog($"路径不存在，跳过: {config.Path}\n");
+                    AppendLog($"路径不存在，跳过: {config.Path}\n");
                     continue;
                 }
 
@@ -402,7 +401,7 @@ namespace DotNetBuilder.ViewModels
                 var project = await _gitService.AddGitProjectAsync(config.Path, null);
                 if (project == null)
                 {
-                    _appendLog($"非Git项目目录，跳过: {config.Path}\n");
+                    AppendLog($"非Git项目目录，跳过: {config.Path}\n");
                     continue;
                 }
 
@@ -447,7 +446,7 @@ namespace DotNetBuilder.ViewModels
             }
 
             SelectedProject = Projects.FirstOrDefault(s => !string.IsNullOrEmpty(s.ExecuteFile));
-            _appendLog($"已加载 {Projects.Count} 个项目\n");
+            AppendLog($"已加载 {Projects.Count} 个项目\n");
         }
 
         #region 公共操作方法
@@ -459,13 +458,13 @@ namespace DotNetBuilder.ViewModels
         {
             if (project.SelectedMSBuildVersion == null)
             {
-                _appendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
+                AppendLog($"[{project.Name}] 请先选择 MSBuild 版本\n");
                 return;
             }
 
             if (clearLog)
                 _outputViewModel.LogOutput = string.Empty;
-            _appendLog($"\n========== 构建项目: {project.Name} ==========\n");
+            AppendLog($"\n========== 构建项目: {project.Name} ==========\n");
 
             project.ClearError();
             project.IsBuilding = true;
@@ -473,25 +472,25 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
-                _appendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
+                var progress = new Progress<string>(msg => AppendLog($"[{project.Name}] {msg}\n"));
+                AppendLog($"[{project.Name}] 使用 MSBuild: {project.SelectedMSBuildVersion.DisplayName}, 配置: {project.Configuration}\n");
                 var result = await _msbuildService.BuildProjectAsync(project, project.Configuration, project.SelectedMSBuildVersion, progress);
 
                 if (result.Success)
                 {
                     project.IsExpanded = false;
-                    _appendLog($"[{project.Name}] 构建成功\n");
+                    AppendLog($"[{project.Name}] 构建成功\n");
                 }
                 else
                 {
                     project.ErrorMessage = result.ErrorMessage ?? "构建失败";
-                    _appendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
+                    AppendLog($"[{project.Name}] 构建失败: {result.ErrorMessage}\n");
                 }
                 _outputViewModel.ForceFlush();
             }
             catch (Exception ex)
             {
-                _appendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
+                AppendLog($"[{project.Name}] 构建异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally
@@ -505,7 +504,7 @@ namespace DotNetBuilder.ViewModels
         /// </summary>
         public async Task ExecuteSyncAsync(GitProject project)
         {
-            _appendLog($"\n========== 同步项目: {project.Name} ==========\n");
+            AppendLog($"\n========== 同步项目: {project.Name} ==========\n");
 
             project.ClearError();
             project.IsSyncing = true;
@@ -513,7 +512,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                var progress = new Progress<string>(msg => AppendLog($"[{project.Name}] {msg}\n"));
                 var options = GetSyncOptions();
 
                 await _gitService.UpdateProjectStatusAsync(project);
@@ -523,7 +522,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
+                AppendLog($"[{project.Name}] 同步异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally
@@ -537,7 +536,7 @@ namespace DotNetBuilder.ViewModels
         /// </summary>
         public async Task ExecutePushAsync(GitProject project)
         {
-            _appendLog($"\n========== 推送项目: {project.Name} ==========\n");
+            AppendLog($"\n========== 推送项目: {project.Name} ==========\n");
 
             project.ClearError();
             project.IsSyncing = true;
@@ -545,23 +544,23 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                var progress = new Progress<string>(msg => AppendLog($"[{project.Name}] {msg}\n"));
                 var success = await _gitSyncService.PushProjectAsync(project, progress);
 
                 if (success)
                 {
-                    _appendLog($"[{project.Name}] 推送成功\n");
+                    AppendLog($"[{project.Name}] 推送成功\n");
                     project.IsExpanded = false;
                 }
                 else
                 {
                     project.ErrorMessage = "推送失败";
-                    _appendLog($"[{project.Name}] 推送失败\n");
+                    AppendLog($"[{project.Name}] 推送失败\n");
                 }
             }
             catch (Exception ex)
             {
-                _appendLog($"[{project.Name}] 推送异常: {ex.Message}\n");
+                AppendLog($"[{project.Name}] 推送异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally
@@ -575,7 +574,7 @@ namespace DotNetBuilder.ViewModels
         /// </summary>
         public async Task ExecuteCommitAsync(GitProject project)
         {
-            _appendLog($"\n========== 提交项目: {project.Name} ==========\n");
+            AppendLog($"\n========== 提交项目: {project.Name} ==========\n");
 
             project.ClearError();
             project.IsCommitting = true;
@@ -583,7 +582,7 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var progress = new Progress<string>(msg => _appendLog($"[{project.Name}] {msg}\n"));
+                var progress = new Progress<string>(msg => AppendLog($"[{project.Name}] {msg}\n"));
 
                 var result = await _gitSyncService.CommitProjectAsync(
                     project,
@@ -596,11 +595,11 @@ namespace DotNetBuilder.ViewModels
                     if (result.HasCommit)
                     {
                         project.CommitMessage = "";
-                        _appendLog($"[{project.Name}] 提交完成\n");
+                        AppendLog($"[{project.Name}] 提交完成\n");
                     }
                     else
                     {
-                        _appendLog($"[{project.Name}] {result.Message}\n");
+                        AppendLog($"[{project.Name}] {result.Message}\n");
                     }
                     project.IsExpanded = false;
                 }
@@ -608,13 +607,13 @@ namespace DotNetBuilder.ViewModels
                 {
                     if (result.NeedsCommitMessage)
                     {
-                        _appendLog($"[{project.Name}] 需要填写提交信息\n");
+                        AppendLog($"[{project.Name}] 需要填写提交信息\n");
                         project.IsExpanded = true;
                     }
                     else
                     {
                         project.ErrorMessage = result.Message;
-                        _appendLog($"[{project.Name}] 提交失败: {result.Message}\n");
+                        AppendLog($"[{project.Name}] 提交失败: {result.Message}\n");
                     }
                 }
 
@@ -622,7 +621,7 @@ namespace DotNetBuilder.ViewModels
             }
             catch (Exception ex)
             {
-                _appendLog($"[{project.Name}] 提交异常: {ex.Message}\n");
+                AppendLog($"[{project.Name}] 提交异常: {ex.Message}\n");
                 project.ErrorMessage = ex.Message;
             }
             finally
@@ -688,7 +687,7 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            _appendLog($"\n========== 开始构建 {selectedProjects.Count} 个项目 ==========\n");
+            AppendLog($"\n========== 开始构建 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
@@ -697,7 +696,7 @@ namespace DotNetBuilder.ViewModels
                 {
                     if (buildFailed)
                     {
-                        _appendLog($"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n");
+                        AppendLog($"[{project.Name}] 跳过多项目中构建（因前置项目构建失败）\n");
                         continue;
                     }
 
@@ -710,7 +709,7 @@ namespace DotNetBuilder.ViewModels
                     }
                 }
 
-                _appendLog($"\n========== 构建完成 ==========\n");
+                AppendLog($"\n========== 构建完成 ==========\n");
                 _outputViewModel.ForceFlush();
             }
             finally
@@ -731,13 +730,13 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            _appendLog($"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n");
+            AppendLog($"\n========== 开始同步 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
                 var tasks = selectedProjects.Select(project => ExecuteSyncAsync(project));
                 await Task.WhenAll(tasks);
-                _appendLog($"\n========== 同步完成 ==========\n");
+                AppendLog($"\n========== 同步完成 ==========\n");
             }
             finally
             {
@@ -757,13 +756,13 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            _appendLog($"\n========== 开始推送 {selectedProjects.Count} 个项目 ==========\n");
+            AppendLog($"\n========== 开始推送 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
                 var tasks = selectedProjects.Select(project => ExecutePushAsync(project));
                 await Task.WhenAll(tasks);
-                _appendLog($"\n========== 推送完成 ==========\n");
+                AppendLog($"\n========== 推送完成 ==========\n");
             }
             finally
             {
@@ -793,13 +792,13 @@ namespace DotNetBuilder.ViewModels
             }
 
             IsBusy = true;
-            _appendLog($"\n========== 开始提交 {selectedProjects.Count} 个项目 ==========\n");
+            AppendLog($"\n========== 开始提交 {selectedProjects.Count} 个项目 ==========\n");
 
             try
             {
                 var tasks = selectedProjects.Select(project => ExecuteCommitAsync(project));
                 await Task.WhenAll(tasks);
-                _appendLog($"\n========== 提交完成 ==========\n");
+                AppendLog($"\n========== 提交完成 ==========\n");
             }
             finally
             {
@@ -844,7 +843,7 @@ namespace DotNetBuilder.ViewModels
             {
                 await _gitService.UpdateProjectStatusAsync(project);
                 await Application.Current.Dispatcher.InvokeAsync(() => project.IsExpanded = false);
-                _appendLog($"[{project.Name}] 同步成功\n");
+                AppendLog($"[{project.Name}] 同步成功\n");
             }
             else
             {
@@ -853,7 +852,7 @@ namespace DotNetBuilder.ViewModels
                     project.ErrorMessage = result.Message;
                     project.IsExpanded = true;
                 });
-                _appendLog($"[{project.Name}] 同步失败: {result.Message}\n");
+                AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
             }
         }
         #endregion

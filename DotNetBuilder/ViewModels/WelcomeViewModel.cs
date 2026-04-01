@@ -26,11 +26,11 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private RecentProject _selectedProject;
 
-        public WelcomeViewModel(ProjectService projectService, NavigationService navigationService)
+        public WelcomeViewModel(ProjectService projectService, NavigationService navigationService, ConfigService configService)
         {
             _projectService = projectService;
             _navigationService = navigationService;
-            _configService = new ConfigService();
+            _configService = configService;
 
             _ = LoadRecentProjectsAsync();
         }

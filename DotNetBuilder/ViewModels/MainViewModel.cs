@@ -45,38 +45,43 @@ namespace DotNetBuilder.ViewModels
         public NewProjectDialogViewModel NewProjectViewModel { get; }
         public CloneDialogViewModel CloneDialogViewModel { get; }
 
-        public MainViewModel()
+        public MainViewModel(
+            GitService gitService,
+            GitSyncService gitSyncService,
+            MSBuildService msbuildService,
+            ConfigService configService,
+            ProjectService projectService,
+            FileAssociationService fileAssociationService,
+            NavigationService navigationService,
+            DialogService dialogService,
+            ProjectLifecycleService lifecycleService,
+            OutputViewModel outputViewModel,
+            ConflictDialogViewModel conflictViewModel,
+            ProjectListViewModel projectListViewModel,
+            NewProjectDialogViewModel newProjectViewModel,
+            CloneDialogViewModel cloneDialogViewModel,
+            WelcomeViewModel welcomeViewModel,
+            ToolbarViewModel toolbarViewModel)
         {
-            // 初始化服务
-            _gitService = new GitService();
-            _gitSyncService = new GitSyncService();
-            _msbuildService = new MSBuildService();
-            _configService = new ConfigService();
-            _projectService = new ProjectService();
-            _fileAssociationService = new FileAssociationService();
-            _navigationService = new NavigationService();
+            // 注入服务
+            _gitService = gitService;
+            _gitSyncService = gitSyncService;
+            _msbuildService = msbuildService;
+            _configService = configService;
+            _projectService = projectService;
+            _fileAssociationService = fileAssociationService;
+            _navigationService = navigationService;
+            _dialogService = dialogService;
+            _lifecycleService = lifecycleService;
 
-            // 初始化子 ViewModels（必须先于 ProjectLifecycleService）
-            OutputViewModel = new OutputViewModel();
-            ConflictViewModel = new ConflictDialogViewModel();
-            ProjectListViewModel = new ProjectListViewModel(_gitService, _gitSyncService, _msbuildService, OutputViewModel, ConflictViewModel, AppendLog);
-            NewProjectViewModel = new NewProjectDialogViewModel();
-            CloneDialogViewModel = new CloneDialogViewModel();
-            WelcomeViewModel = new WelcomeViewModel(_projectService, _navigationService);
-            ToolbarViewModel = new ToolbarViewModel(_navigationService);
-
-            // 初始化对话框服务
-            _dialogService = new DialogService(ShowNewProjectDialogDialog, ShowConflictDialogDialog);
-
-            // 初始化 ProjectLifecycleService
-            _lifecycleService = new ProjectLifecycleService(
-                _gitService,
-                _projectService,
-                AppendLog,
-                () => HasProject,
-                () => ProjectListViewModel,
-                () => NewProjectViewModel,
-                () => SelectedPath);
+            // 注入子 ViewModels
+            OutputViewModel = outputViewModel;
+            ConflictViewModel = conflictViewModel;
+            ProjectListViewModel = projectListViewModel;
+            NewProjectViewModel = newProjectViewModel;
+            CloneDialogViewModel = cloneDialogViewModel;
+            WelcomeViewModel = welcomeViewModel;
+            ToolbarViewModel = toolbarViewModel;
 
             // 订阅导航服务事件
             _navigationService.OnOpenProjectRequested += async (filePath) => await OpenProjectAsync(filePath);
@@ -86,7 +91,6 @@ namespace DotNetBuilder.ViewModels
             _lifecycleService.OnProjectClosed += OnProjectClosed;
 
             // 设置对话框回调
-            ConflictViewModel.SetAppendLog(AppendLog);
             NewProjectViewModel.SetOnConfirmCallback(CreateNewProject);
             CloneDialogViewModel.SetOnCloneCallback(CloneRepositoryAsync);
             CloneDialogViewModel.SetOnCloneSuccessCallback(OnCloneSuccess);
@@ -99,6 +103,9 @@ namespace DotNetBuilder.ViewModels
             ToolbarViewModel.SetOnRefreshStatus(async () => await _lifecycleService.RefreshStatusAsync(Projects));
             ToolbarViewModel.SetOnScanAndAddProjects(async path => await ScanAndAddProjectsAsync(path));
             ToolbarViewModel.SetOnCloneProject(() => CloneDialogViewModel.ShowWithDefaultDirectory(SelectedPath));
+
+            // 设置生命周期服务的 SelectedPath 属性
+            _lifecycleService.SelectedPath = string.Empty;
 
             // 加载 MSBuild 版本
             LoadMSBuildVersions();

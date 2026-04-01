@@ -9,7 +9,7 @@ namespace DotNetBuilder.ViewModels
     /// </summary>
     public partial class ConflictDialogViewModel : ObservableObject
     {
-        private Action<string>? _appendLog;
+        private readonly OutputViewModel _outputViewModel;
 
         [ObservableProperty]
         private GitProject? _conflictProject;
@@ -25,13 +25,9 @@ namespace DotNetBuilder.ViewModels
         [ObservableProperty]
         private bool _showDialog;
 
-        public ConflictDialogViewModel()
+        public ConflictDialogViewModel(OutputViewModel outputViewModel)
         {
-        }
-
-        public void SetAppendLog(Action<string> appendLog)
-        {
-            _appendLog = appendLog;
+            _outputViewModel = outputViewModel;
         }
 
         [RelayCommand]
@@ -53,7 +49,7 @@ namespace DotNetBuilder.ViewModels
                         Arguments = $"\"{ConflictProject.Path}\"",
                         UseShellExecute = true
                     });
-                    _appendLog?.Invoke($"[{ConflictProject.Name}] 打开文件夹解决冲突\n");
+                    _outputViewModel.AppendLog($"[{ConflictProject.Name}] 打开文件夹解决冲突\n");
                 }
                 else
                 {
@@ -63,15 +59,15 @@ namespace DotNetBuilder.ViewModels
                         Arguments = $"\"{targetPath}\"",
                         UseShellExecute = true
                     });
-                    _appendLog?.Invoke($"[{ConflictProject.Name}] 用 Visual Studio 打开解决冲突\n");
+                    _outputViewModel.AppendLog($"[{ConflictProject.Name}] 用 Visual Studio 打开解决冲突\n");
                 }
 
-                _appendLog?.Invoke($"[{ConflictProject.Name}] 请解决冲突后重新同步\n");
+                _outputViewModel.AppendLog($"[{ConflictProject.Name}] 请解决冲突后重新同步\n");
                 Close();
             }
             catch (Exception ex)
             {
-                _appendLog?.Invoke($"[{ConflictProject.Name}] 打开失败: {ex.Message}\n");
+                _outputViewModel.AppendLog($"[{ConflictProject.Name}] 打开失败: {ex.Message}\n");
             }
         }
 

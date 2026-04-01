@@ -91,6 +91,7 @@
                         <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Padding" Value="0" />
+                        <EventSetter Event="PreviewMouseRightButtonUp" Handler="ListBoxItem_PreviewMouseRightButtonUp" />
                     </Style>
                 </AduSkin:AduListBox.ItemContainerStyle>
                 <AduSkin:AduListBox.ContextMenu>
@@ -265,7 +266,7 @@
                                                 AduAttach:PathDataAttach.Margin="0"
                                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Sync}"
                                                 AduAttach:PathDataAttach.Width="12"
-                                                Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
+                                                Command="{Binding DataContext.SyncSingleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip="单独同步此项目"
                                                 Visibility="{Binding IsSyncing, Converter={StaticResource BooleanToReVisibility}}" />
@@ -286,7 +287,7 @@
                                                 AduAttach:PathDataAttach.Margin="0"
                                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Build}"
                                                 AduAttach:PathDataAttach.Width="12"
-                                                Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
+                                                Command="{Binding DataContext.BuildSingleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip="单独构建此项目"
                                                 Visibility="{Binding IsBuilding, Converter={StaticResource BooleanToReVisibility}}" />
@@ -307,7 +308,7 @@
                                                 AduAttach:PathDataAttach.Margin="0"
                                                 AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Commit}"
                                                 AduAttach:PathDataAttach.Width="12"
-                                                Command="{Binding DataContext.CommitSingleCommand, RelativeSource={RelativeSource AncestorType=AduSkin:AduListBox}}"
+                                                Command="{Binding DataContext.CommitSingleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 ToolTip="提交此项目"
                                                 Visibility="{Binding IsCommitting, Converter={StaticResource BooleanToReVisibility}}" />
@@ -544,10 +545,10 @@
                             <AduSkin:AduComboBox
                                 MinWidth="100"
                                 MaxWidth="350"
-                                DisplayMemberPath="Path"
+                                DisplayMemberPath="Name"
                                 IsShowFilterBox="True"
                                 ItemsSource="{Binding Projects}"
-                                SelectedItem="{Binding SelectedProject}" />
+                                SelectedItem="{Binding SelectedProject, UpdateSourceTrigger=PropertyChanged}" />
                         </AduSkin:AduFormBox>
                         <AduSkin:AduPathIconButton
                             Margin="5,0"

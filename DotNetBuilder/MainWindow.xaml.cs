@@ -4,6 +4,7 @@ using System.Windows.Input;
 using AduSkin.Controls;
 using DotNetBuilder.Models;
 using DotNetBuilder.ViewModels;
+using DotNetBuilder.Services;
 
 namespace DotNetBuilder
 {
@@ -17,7 +18,7 @@ namespace DotNetBuilder
         public MainWindow()
         {
             InitializeComponent();
-            DataContext = new MainViewModel();
+            DataContext = AppHost.GetRequiredService<MainViewModel>();
             Loaded += MainWindow_Loaded;
         }
 
