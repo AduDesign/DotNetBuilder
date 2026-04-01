@@ -629,22 +629,31 @@ namespace DotNetBuilder.Services
         /// </summary>
         private List<string> SortProjectsByDependencies(List<string> csprojFiles)
         {
-            var csprojSet = csprojFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // 规范化所有路径
+            var normalizedFiles = csprojFiles
+                .Select(f => Path.GetFullPath(f))
+                .ToList();
+
+            var normalizedSet = normalizedFiles.ToHashSet(StringComparer.OrdinalIgnoreCase);
             var graph = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var csproj in csprojFiles)
+            // 构建依赖图：graph[A] = A依赖的项目集合
+            foreach (var csproj in normalizedFiles)
             {
                 graph[csproj] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var refPath in ParseProjectReferences(csproj))
                 {
-                    if (csprojSet.Contains(refPath))
-                        graph[csproj].Add(refPath);
+                    // 规范化引用路径后再匹配
+                    var normalizedRef = Path.GetFullPath(refPath);
+                    if (normalizedSet.Contains(normalizedRef))
+                        graph[csproj].Add(normalizedRef);
                 }
             }
 
             var result = new List<string>();
-            var inDegree = csprojFiles.ToDictionary(c => c, _ => 0, StringComparer.OrdinalIgnoreCase);
+            var inDegree = normalizedFiles.ToDictionary(c => c, _ => 0, StringComparer.OrdinalIgnoreCase);
 
+            // 计算入度：inDegree[X] = X 被多少个项目依赖
             foreach (var deps in graph.Values)
             {
                 foreach (var dep in deps)
@@ -654,8 +663,9 @@ namespace DotNetBuilder.Services
                 }
             }
 
+            // 从入度为0的开始（不被任何项目依赖的叶子项目）
             var queue = new Queue<string>();
-            foreach (var csproj in csprojFiles.Where(c => inDegree[c] == 0))
+            foreach (var csproj in normalizedFiles.Where(c => inDegree[c] == 0))
                 queue.Enqueue(csproj);
 
             while (queue.Count > 0)
@@ -670,7 +680,8 @@ namespace DotNetBuilder.Services
                 }
             }
 
-            foreach (var csproj in csprojFiles.Where(c => !result.Contains(c)))
+            // 处理循环依赖或无法排序的项目（放到最后）
+            foreach (var csproj in normalizedFiles.Where(c => !result.Contains(c)))
                 result.Add(csproj);
 
             return result;
@@ -712,26 +723,61 @@ namespace DotNetBuilder.Services
                 // 确定构建策略
                 string? slnPath = project.SolutionPath;
                 List<string> csprojFiles = new();
+                bool useSolutionBuild = !string.IsNullOrEmpty(slnPath) && File.Exists(slnPath);
 
-                if (!string.IsNullOrEmpty(slnPath) && File.Exists(slnPath))
+                if (useSolutionBuild)
                 {
-                    // 策略1: 有 .sln，解析获取所有项目
+                    // 策略1: 有 .sln，直接构建整个解决方案（行为最接近 Visual Studio）
                     progress?.Report($"========================================");
                     progress?.Report($"[{project.Name}] 检测到解决方案: {Path.GetFileName(slnPath)}");
 
-                    csprojFiles = ParseSlnProjects(slnPath);
-                    progress?.Report($"[Solution] 包含 {csprojFiles.Count} 个项目");
+                    // 获取工作目录（.sln 所在目录）
+                    var slnWorkingDir = Path.GetDirectoryName(slnPath) ?? project.Path;
+                    progress?.Report($"[{project.Name}] 开始构建 (配置: {configuration})");
+                    progress?.Report($"使用 MSBuild: {msbuildPath}");
+                    progress?.Report($"========================================");
 
-                    if (csprojFiles.Count == 0)
+                    // 还原 NuGet 包
+                    progress?.Report($"[NuGet] 正在还原包...");
+                    await RestoreNuGetPackagesAsync(project.Name, msbuildPath, slnPath!, slnWorkingDir, progress);
+
+                    // 直接构建 .sln 文件
+                    progress?.Report($"\n--- 构建解决方案: {Path.GetFileName(slnPath)} ---");
+
+                    string args = msbuildPath == "dotnet"
+                        ? $"build \"{slnPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n"
+                        : $"\"{slnPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
+
+                    var output = await RunMSBuildAsync(msbuildPath, args, slnWorkingDir, progress);
+
+                    // 检查构建结果
+                    var hasErrors = output.Contains("error CS") || (output.Contains("Error(s)") && !output.Contains("0 Error(s)"));
+                    var hasSuccess = output.Contains("Build succeeded") ||
+                                     output.Contains("Build SUCCEEDED") ||
+                                     output.Contains("成功生成") ||
+                                     (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
+
+                    if (!hasSuccess || hasErrors)
                     {
                         result.Success = false;
-                        result.ErrorMessage = "解决方案中没有找到任何项目";
-                        return result;
+                        result.ErrorMessage = "解决方案构建失败";
+                        progress?.Report($"[失败] 解决方案构建失败");
                     }
+                    else
+                    {
+                        result.Success = true;
+                        progress?.Report($"[成功] 解决方案构建成功");
+                    }
+
+                    result.Duration = stopwatch.Elapsed;
+                    progress?.Report($"\n========================================");
+                    progress?.Report($"[{project.Name}] 构建完成 (耗时: {result.Duration.TotalSeconds:F1}s)");
+                    progress?.Report($"========================================");
+                    return result;
                 }
                 else
                 {
-                    // 策略2: 没有 .sln，收集所有 .csproj
+                    // 策略2: 没有 .sln，收集所有 .csproj 并按依赖顺序构建
                     progress?.Report($"========================================");
                     progress?.Report($"[{project.Name}] 未检测到解决方案，搜索 .csproj 文件...");
 
@@ -744,74 +790,81 @@ namespace DotNetBuilder.Services
                         result.ErrorMessage = "未找到可构建的项目文件";
                         return result;
                     }
-                }
 
-                // 按依赖顺序排序
-                csprojFiles = SortProjectsByDependencies(csprojFiles);
+                    // 按依赖顺序排序
+                    csprojFiles = SortProjectsByDependencies(csprojFiles);
 
-                progress?.Report($"[{project.Name}] 开始构建 (配置: {configuration})");
-                progress?.Report($"使用 MSBuild: {msbuildPath}");
-                progress?.Report($"========================================");
-
-                // 还原 NuGet 包（对第一个项目执行一次即可）
-                progress?.Report($"[NuGet] 正在还原包...");
-                await RestoreNuGetPackagesAsync(project.Name, msbuildPath, csprojFiles[0], project.Path, progress);
-
-                // 逐个构建所有项目
-                bool allSuccess = true;
-                var failedProjects = new List<string>();
-                var successCount = 0;
-
-                for (int i = 0; i < csprojFiles.Count; i++)
-                {
-                    var csprojPath = csprojFiles[i];
-                    var csprojName = Path.GetFileNameWithoutExtension(csprojPath);
-                    var relDir = Path.GetDirectoryName(csprojPath) ?? "";
-                    var displayPath = relDir.StartsWith(project.Path)
-                        ? relDir.Substring(project.Path.Length).TrimStart('\\', '/') + "\\" + Path.GetFileName(csprojPath)
-                        : Path.GetFileName(relDir) + "\\" + Path.GetFileName(csprojPath);
-
-                    progress?.Report($"\n--- [{i + 1}/{csprojFiles.Count}] 构建: {displayPath} ---");
-
-                    string args = msbuildPath == "dotnet"
-                        ? $"build \"{csprojPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n"
-                        : $"\"{csprojPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
-
-                    var output = await RunMSBuildAsync(msbuildPath, args, project.Path, progress);
-
-                    var hasErrors = output.Contains("error CS") || (output.Contains("Error(s)") && !output.Contains("0 Error(s)"));
-                    var hasSuccess = output.Contains("Build succeeded") ||
-                                     output.Contains("Build SUCCEEDED") ||
-                                     output.Contains("成功生成") ||
-                                     (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
-
-                    if (!hasSuccess || hasErrors)
+                    // 输出构建顺序
+                    progress?.Report($"[{project.Name}] 构建顺序（按依赖关系）:");
+                    for (int i = 0; i < csprojFiles.Count; i++)
                     {
-                        allSuccess = false;
-                        failedProjects.Add(displayPath);
-                        progress?.Report($"[失败] {displayPath}");
+                        var displayPath = GetRelativePath(csprojFiles[i], project.Path);
+                        progress?.Report($"  [{i + 1}] {displayPath}");
+                    }
+                    progress?.Report($"[{project.Name}] 开始构建 (配置: {configuration})");
+                    progress?.Report($"使用 MSBuild: {msbuildPath}");
+                    progress?.Report($"========================================");
+
+                    // 还原 NuGet 包（对第一个项目执行一次即可）
+                    progress?.Report($"[NuGet] 正在还原包...");
+                    await RestoreNuGetPackagesAsync(project.Name, msbuildPath, csprojFiles[0], project.Path, progress);
+
+                    // 逐个构建所有项目
+                    bool allSuccess = true;
+                    var failedProjects = new List<string>();
+                    var successCount = 0;
+
+                    for (int i = 0; i < csprojFiles.Count; i++)
+                    {
+                        var csprojPath = csprojFiles[i];
+                        var csprojName = Path.GetFileNameWithoutExtension(csprojPath);
+                        var relDir = Path.GetDirectoryName(csprojPath) ?? "";
+                        var displayPath = relDir.StartsWith(project.Path)
+                            ? relDir.Substring(project.Path.Length).TrimStart('\\', '/') + "\\" + Path.GetFileName(csprojPath)
+                            : Path.GetFileName(relDir) + "\\" + Path.GetFileName(csprojPath);
+
+                        progress?.Report($"\n--- [{i + 1}/{csprojFiles.Count}] 构建: {displayPath} ---");
+
+                        string args = msbuildPath == "dotnet"
+                            ? $"build \"{csprojPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n"
+                            : $"\"{csprojPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
+
+                        var output = await RunMSBuildAsync(msbuildPath, args, project.Path, progress);
+
+                        var hasErrors = output.Contains("error CS") || (output.Contains("Error(s)") && !output.Contains("0 Error(s)"));
+                        var hasSuccess = output.Contains("Build succeeded") ||
+                                         output.Contains("Build SUCCEEDED") ||
+                                         output.Contains("成功生成") ||
+                                         (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
+
+                        if (!hasSuccess || hasErrors)
+                        {
+                            allSuccess = false;
+                            failedProjects.Add(displayPath);
+                            progress?.Report($"[失败] {displayPath}");
+                        }
+                        else
+                        {
+                            successCount++;
+                            progress?.Report($"[成功] {displayPath}");
+                        }
+                    }
+
+                    result.Success = allSuccess;
+                    result.Duration = stopwatch.Elapsed;
+
+                    progress?.Report($"\n========================================");
+                    if (result.Success)
+                    {
+                        progress?.Report($"[{project.Name}] 全部构建成功 ({csprojFiles.Count} 个项目，耗时: {result.Duration.TotalSeconds:F1}s)");
                     }
                     else
                     {
-                        successCount++;
-                        progress?.Report($"[成功] {displayPath}");
+                        result.ErrorMessage = $"{failedProjects.Count} 个项目构建失败:\n" + string.Join("\n", failedProjects);
+                        progress?.Report($"[{project.Name}] 构建完成，{successCount}/{csprojFiles.Count} 个成功，{failedProjects.Count} 个失败:");
+                        foreach (var fp in failedProjects)
+                            progress?.Report($"  - {fp}");
                     }
-                }
-
-                result.Success = allSuccess;
-                result.Duration = stopwatch.Elapsed;
-
-                progress?.Report($"\n========================================");
-                if (result.Success)
-                {
-                    progress?.Report($"[{project.Name}] 全部构建成功 ({csprojFiles.Count} 个项目，耗时: {result.Duration.TotalSeconds:F1}s)");
-                }
-                else
-                {
-                    result.ErrorMessage = $"{failedProjects.Count} 个项目构建失败:\n" + string.Join("\n", failedProjects);
-                    progress?.Report($"[{project.Name}] 构建完成，{successCount}/{csprojFiles.Count} 个成功，{failedProjects.Count} 个失败:");
-                    foreach (var fp in failedProjects)
-                        progress?.Report($"  - {fp}");
                 }
 
                 // 显示输出
@@ -1056,6 +1109,19 @@ namespace DotNetBuilder.Services
                 }
             }
             catch { }
+        }
+
+        /// <summary>
+        /// 获取相对路径用于显示
+        /// </summary>
+        private string GetRelativePath(string fullPath, string basePath)
+        {
+            if (fullPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+            {
+                var rel = fullPath.Substring(basePath.Length).TrimStart('\\', '/');
+                return string.IsNullOrEmpty(rel) ? Path.GetFileName(fullPath) : rel;
+            }
+            return fullPath;
         }
     }
 }
