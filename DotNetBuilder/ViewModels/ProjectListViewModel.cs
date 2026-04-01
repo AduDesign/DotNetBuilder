@@ -20,9 +20,7 @@ namespace DotNetBuilder.ViewModels
         private readonly ConflictDialogViewModel _conflictViewModel;
 
         [ObservableProperty]
-        private bool _isBusy;
-
-        public GitProject? SelectedItem => SelectedProject;
+        private bool _isBusy; 
 
         [ObservableProperty]
         private GitProject? _selectedProject;

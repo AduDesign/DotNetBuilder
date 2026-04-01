@@ -98,46 +98,46 @@
                     <AduSkin:AduContextMenu>
                         <AduSkin:AduMenuItem
                             Command="{Binding BuildSingleCommand}"
-                            CommandParameter="{Binding SelectedItem}"
+                            CommandParameter="{Binding SelectedProject}"
                             Header="构建" />
                         <AduSkin:AduMenuItem
                             Command="{Binding RunSelectedCommand}"
-                            CommandParameter="{Binding SelectedItem}"
+                            CommandParameter="{Binding SelectedProject}"
                             Header="运行" />
                         <Separator />
                         <AduSkin:AduMenuItem Header="打开方式">
                             <AduSkin:AduMenuItem
                                 Command="{Binding OpenFolderCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="打开目录文件夹" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding OpenVSCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="VisualStudio 打开" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding OpenVSCodeCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="VisualStudio Code 打开" />
                         </AduSkin:AduMenuItem>
                         <AduSkin:AduMenuItem Header="Git">
                             <AduSkin:AduMenuItem
                                 Command="{Binding SyncSingleCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="同步" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding CommitSingleCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="提交" />
                             <AduSkin:AduMenuItem
                                 Command="{Binding PushProjectCommand}"
-                                CommandParameter="{Binding SelectedItem}"
+                                CommandParameter="{Binding SelectedProject}"
                                 Header="推送" />
                         </AduSkin:AduMenuItem>
                         <Separator />
 
                         <AduSkin:AduMenuItem
                             Command="{Binding RemoveProjectCommand}"
-                            CommandParameter="{Binding SelectedItem}"
+                            CommandParameter="{Binding SelectedProject}"
                             Header="删除" />
                     </AduSkin:AduContextMenu>
                 </AduSkin:AduListBox.ContextMenu>
