@@ -745,28 +745,37 @@ namespace DotNetBuilder.Services
                     progress?.Report($"\n--- 构建解决方案: {Path.GetFileName(slnPath)} ---");
 
                     string args = msbuildPath == "dotnet"
-                        ? $"build \"{slnPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n"
-                        : $"\"{slnPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
+                        ? $"build \"{slnPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:m"
+                        : $"\"{slnPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:m";
 
                     var output = await RunMSBuildAsync(msbuildPath, args, slnWorkingDir, progress);
 
-                    // 检查构建结果
-                    var hasErrors = output.Contains("error CS") || (output.Contains("Error(s)") && !output.Contains("0 Error(s)"));
-                    var hasSuccess = output.Contains("Build succeeded") ||
-                                     output.Contains("Build SUCCEEDED") ||
-                                     output.Contains("成功生成") ||
-                                     (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
+                    // 检查构建结果 - 改进检测逻辑
+                    var hasErrors = output.Contains("error CS") || output.Contains("error:");
+                    var hasBuildSuccess = output.Contains("Build succeeded") ||
+                                         output.Contains("Build SUCCEEDED") ||
+                                         output.Contains("成功生成") ||
+                                         output.Contains("0 Error(s)");
+                    var hasBuildFailed = output.Contains("Build FAILED") ||
+                                        output.Contains("Build FAILED") ||
+                                        output.Contains("生成失败");
 
-                    if (!hasSuccess || hasErrors)
+                    if (hasBuildFailed || (hasErrors && !hasBuildSuccess))
                     {
                         result.Success = false;
                         result.ErrorMessage = "解决方案构建失败";
                         progress?.Report($"[失败] 解决方案构建失败");
                     }
-                    else
+                    else if (hasBuildSuccess)
                     {
                         result.Success = true;
                         progress?.Report($"[成功] 解决方案构建成功");
+                    }
+                    else
+                    {
+                        // 无法确定结果，保守处理
+                        result.Success = !hasErrors;
+                        progress?.Report(hasErrors ? $"[失败] 解决方案构建失败" : $"[成功] 解决方案构建成功");
                     }
 
                     result.Duration = stopwatch.Elapsed;
@@ -826,27 +835,37 @@ namespace DotNetBuilder.Services
                         progress?.Report($"\n--- [{i + 1}/{csprojFiles.Count}] 构建: {displayPath} ---");
 
                         string args = msbuildPath == "dotnet"
-                            ? $"build \"{csprojPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:n"
-                            : $"\"{csprojPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:n";
+                            ? $"build \"{csprojPath}\" -c {configuration} /p:AllowUnsafeBlocks=true /v:m"
+                            : $"\"{csprojPath}\" /t:Build /p:Configuration={configuration} /p:AllowUnsafeBlocks=true /nr:false /v:m";
 
                         var output = await RunMSBuildAsync(msbuildPath, args, project.Path, progress);
 
-                        var hasErrors = output.Contains("error CS") || (output.Contains("Error(s)") && !output.Contains("0 Error(s)"));
-                        var hasSuccess = output.Contains("Build succeeded") ||
-                                         output.Contains("Build SUCCEEDED") ||
-                                         output.Contains("成功生成") ||
-                                         (output.Contains("Error(s)") && output.Contains("0 Error(s)"));
+                        // 检查构建结果 - 改进检测逻辑
+                        var hasErrors = output.Contains("error CS") || output.Contains("error:");
+                        var hasBuildSuccess = output.Contains("Build succeeded") ||
+                                             output.Contains("Build SUCCEEDED") ||
+                                             output.Contains("成功生成") ||
+                                             output.Contains("0 Error(s)");
+                        var hasBuildFailed = output.Contains("Build FAILED") ||
+                                            output.Contains("生成失败");
 
-                        if (!hasSuccess || hasErrors)
+                        if (hasBuildFailed || (hasErrors && !hasBuildSuccess))
                         {
                             allSuccess = false;
                             failedProjects.Add(displayPath);
                             progress?.Report($"[失败] {displayPath}");
                         }
-                        else
+                        else if (hasBuildSuccess)
                         {
                             successCount++;
                             progress?.Report($"[成功] {displayPath}");
+                        }
+                        else
+                        {
+                            // 无法确定结果，保守处理
+                            allSuccess = false;
+                            failedProjects.Add(displayPath);
+                            progress?.Report($"[失败] {displayPath} (无法确认)");
                         }
                     }
 
