@@ -660,6 +660,28 @@ namespace DotNetBuilder.ViewModels
             await ExecuteCommitAsync(project);
         }
 
+        [RelayCommand]
+        private async Task RefreshAsync(GitProject? project)
+        {
+            if (project == null) return;
+
+            try
+            {
+                // 更新本地更改状态
+                await _gitService.UpdateProjectStatusAsync(project);
+
+                // 获取远程状态（未推送的提交数量）
+                var remoteStatus = await _gitSyncService.GetRemoteStatusAsync(project);
+                project.RemoteStatus = remoteStatus;
+
+                AppendLog($"[{project.Name}] 状态已刷新");
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{project.Name}] 刷新状态失败: {ex.Message}\n");
+            }
+        }
+
         #endregion
 
         #region 一键命令（批量操作）
