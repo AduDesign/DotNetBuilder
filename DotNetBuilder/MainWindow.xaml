@@ -8,9 +8,9 @@
     xmlns:views="clr-namespace:DotNetBuilder.Views"
     x:Name="RootWindow"
     Title=".NET Project Builder"
-    Width="1000"
-    Height="700"
-    MinWidth="600"
+    Width="550"
+    Height="800"
+    MinWidth="550"
     MinHeight="600"
     AduAttach:HeaderAttach.Background="{DynamicResource NormalTransparentBrush}"
     AduAttach:HeaderAttach.FontSize="14"
@@ -156,7 +156,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition
                 Height="200"
-                MinHeight="200"
+                MinHeight="76"
                 MaxHeight="600" />
         </Grid.RowDefinitions>
 
