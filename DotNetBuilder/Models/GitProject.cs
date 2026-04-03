@@ -344,6 +344,8 @@ namespace DotNetBuilder.Models
                     OnPropertyChanged(nameof(RemoteStatusDisplay));
                     OnPropertyChanged(nameof(HasRemoteChanges));
                     OnPropertyChanged(nameof(HasLocalUnpushedChanges));
+                    OnPropertyChanged(nameof(HasUnpushedCommits));
+                    OnPropertyChanged(nameof(UnpushedCommitsCount));
                 }
             }
         }
@@ -395,6 +397,48 @@ namespace DotNetBuilder.Models
                 }
             }
         }
+
+        /// <summary>
+        /// 本地改动文件列表
+        /// </summary>
+        private List<string> _changedFiles = new();
+
+        public List<string> ChangedFiles
+        {
+            get => _changedFiles;
+            set
+            {
+                if (_changedFiles != value)
+                {
+                    _changedFiles = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(ChangedFilesDisplay));
+                    OnPropertyChanged(nameof(HasChangedFiles));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 改动文件显示文本
+        /// </summary>
+        public string ChangedFilesDisplay => ChangesCount > 0
+            ? string.Join("\n", ChangedFiles.Take(20)) + (ChangesCount > 20 ? $"\n... 还有 {ChangesCount - 20} 个文件" : "")
+            : "";
+
+        /// <summary>
+        /// 是否有改动文件
+        /// </summary>
+        public bool HasChangedFiles => ChangesCount > 0;
+
+        /// <summary>
+        /// 是否有未推送的提交
+        /// </summary>
+        public bool HasUnpushedCommits => _remoteStatus?.HasLocalUnpushedChanges ?? false;
+
+        /// <summary>
+        /// 未推送提交数量
+        /// </summary>
+        public int UnpushedCommitsCount => _remoteStatus?.LocalAheadCount ?? 0;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 

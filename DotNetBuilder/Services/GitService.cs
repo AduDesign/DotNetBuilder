@@ -205,15 +205,33 @@ namespace DotNetBuilder.Services
                 var changesCount = string.IsNullOrWhiteSpace(result) ? 0 :
                     result.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
+                // 解析改动文件列表
+                var changedFiles = new List<string>();
+                if (!string.IsNullOrWhiteSpace(result))
+                {
+                    var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var line in lines)
+                    {
+                        // 格式: "XY filename" 如 "M  file.cs", "A  new.cs", "?? untracked.cs"
+                        var parts = line.Split(' ', 2);
+                        if (parts.Length >= 2)
+                        {
+                            changedFiles.Add(parts[1].Trim());
+                        }
+                    }
+                }
+
                 // 注意：由于这是跨线程更新，需要在UI线程上执行
                 project.HasChanges = hasChanges;
                 project.IsExpanded = hasChanges;
                 project.ChangesCount = changesCount;
+                project.ChangedFiles = changedFiles;
             }
             catch
             {
                 project.IsExpanded = project.HasChanges = false;
                 project.ChangesCount = 0;
+                project.ChangedFiles = new List<string>();
             }
         }
 

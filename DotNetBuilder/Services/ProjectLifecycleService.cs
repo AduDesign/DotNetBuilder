@@ -12,6 +12,7 @@ namespace DotNetBuilder.Services
     public class ProjectLifecycleService
     {
         private readonly GitService _gitService;
+        private readonly GitSyncService _gitSyncService;
         private readonly ProjectService _projectService;
         private readonly OutputViewModel _outputViewModel;
         private readonly ProjectListViewModel _projectListViewModel;
@@ -25,12 +26,14 @@ namespace DotNetBuilder.Services
 
         public ProjectLifecycleService(
             GitService gitService,
+            GitSyncService gitSyncService,
             ProjectService projectService,
             OutputViewModel outputViewModel,
             ProjectListViewModel projectListViewModel,
             NewProjectDialogViewModel newProjectDialogViewModel)
         {
             _gitService = gitService;
+            _gitSyncService = gitSyncService;
             _projectService = projectService;
             _outputViewModel = outputViewModel;
             _projectListViewModel = projectListViewModel;
@@ -176,12 +179,37 @@ namespace DotNetBuilder.Services
         {
             AppendLog("\n正在刷新项目状态...\n");
 
-            foreach (var project in projects)
+            var projectList = projects.ToList();
+            int unpushedCount = 0;
+            int uncommittedCount = 0;
+
+            foreach (var project in projectList)
             {
+                // 更新本地更改状态
                 await _gitService.UpdateProjectStatusAsync(project);
+
+                // 获取远程状态（未推送的提交数量）
+                try
+                {
+                    var remoteStatus = await _gitSyncService.GetRemoteStatusAsync(project);
+                    project.RemoteStatus = remoteStatus;
+                    if (remoteStatus.LocalAheadCount > 0)
+                    {
+                        unpushedCount++;
+                    }
+                }
+                catch
+                {
+                    project.RemoteStatus = null;
+                }
+
+                if (project.HasChanges)
+                {
+                    uncommittedCount++;
+                }
             }
 
-            AppendLog("状态刷新完成\n");
+            AppendLog($"状态刷新完成：{uncommittedCount} 个项目有待提交更改，{unpushedCount} 个项目有待推送提交\n");
         }
 
         /// <summary>

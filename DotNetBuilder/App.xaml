@@ -25,6 +25,7 @@
             <converters:ProjectTypeConverter x:Key="ProjectTypeConverter" />
             <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
             <converters:ChangesCountConverter x:Key="ChangesCountConverter" />
+            <converters:RemoteStatusTooltipConverter x:Key="RemoteStatusTooltipConverter" />
 
             <Color x:Key="PrimaryColor">#2089da</Color>
             <SolidColorBrush

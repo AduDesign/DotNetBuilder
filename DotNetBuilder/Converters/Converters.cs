@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using DotNetBuilder.Models;
 
 namespace DotNetBuilder.Converters
 {
@@ -214,6 +215,35 @@ namespace DotNetBuilder.Converters
                 return $"{count} 个更改";
             }
             return "无更改";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 远程状态转提示文本
+    /// </summary>
+    public class RemoteStatusTooltipConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is RemoteStatusInfo status)
+            {
+                var parts = new List<string>();
+                if (status.LocalAheadCount > 0)
+                    parts.Add($"↑ {status.LocalAheadCount} 个提交待推送");
+                if (status.RemoteAheadCount > 0)
+                    parts.Add($"↓ {status.RemoteAheadCount} 个提交待拉取");
+
+                if (status.FetchFailed)
+                    parts.Add("⚠ 连接远程失败");
+
+                return parts.Count > 0 ? string.Join("\n", parts) : "远程状态正常";
+            }
+            return "远程状态";
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

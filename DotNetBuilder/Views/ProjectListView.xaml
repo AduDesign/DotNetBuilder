@@ -80,7 +80,8 @@
                         <Setter Property="Width" Value="24" />
                         <Setter Property="Height" Value="24" />
                         <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
-                        <Setter Property="AduAttach:PathBrushAttach.NormalPathBrush" Value="{DynamicResource Primarybrush}" />
+                        <Setter Property="AduAttach:PathBrushAttach.NormalPathBrush"
+                                Value="{DynamicResource Primarybrush}" />
                         <Setter Property="AduAttach:PathDataAttach.Width" Value="8" />
                         <Setter Property="AduAttach:PathDataAttach.Margin" Value="0" />
                     </Style>
@@ -118,6 +119,10 @@
                                 Command="{Binding OpenVSCodeCommand}"
                                 CommandParameter="{Binding SelectedProject}"
                                 Header="VisualStudio Code 打开" />
+                            <AduSkin:AduMenuItem
+                                Command="{Binding RefreshCommand}"
+                                CommandParameter="{Binding SelectedProject}"
+                                Header="刷新" />
                         </AduSkin:AduMenuItem>
                         <AduSkin:AduMenuItem Header="Git">
                             <AduSkin:AduMenuItem
@@ -234,8 +239,17 @@
                                             FontSize="10"
                                             Foreground="#666"
                                             Text="{Binding RemoteStatusDisplay}"
-                                            ToolTip="远程状态: ↑本地未推送 ↓远程有更新"
+                                            ToolTip="{Binding RemoteStatus, Converter={StaticResource RemoteStatusTooltipConverter}}"
                                             Visibility="{Binding RemoteStatusDisplay, Converter={StaticResource StringToVisibility}}" />
+                                        <TextBlock
+                                            x:Name="txtUnpushedCommits"
+                                            Margin="0,2,0,0"
+                                            HorizontalAlignment="Center"
+                                            FontSize="10"
+                                            FontWeight="Bold"
+                                            Foreground="#E07020"
+                                            Text="{Binding UnpushedCommitsCount, StringFormat='↑{0} 未推送'}"
+                                            Visibility="{Binding HasUnpushedCommits, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </StackPanel>
 
                                     <!--  操作按钮  -->
@@ -281,7 +295,8 @@
                                                 IsActived="{Binding IsSyncing}"
                                                 Type="Apple" />
                                         </Grid>
-                                        <Grid Margin="0,0,5,0" Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid Margin="0,0,5,0"
+                                              Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
                                             <AduSkin:AduPathIconButton
                                                 Margin="0"
                                                 AduAttach:PathDataAttach.Margin="0"
@@ -301,7 +316,8 @@
                                                 IsActived="{Binding IsBuilding}"
                                                 Type="Apple" />
                                         </Grid>
-                                        <Grid Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <Grid
+                                            Visibility="{Binding HasChanges, Converter={StaticResource BooleanToVisibilityConverter}}">
                                             <AduSkin:AduPathIconButton
                                                 Margin="0"
                                                 AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
@@ -370,7 +386,9 @@
                                             Margin="0,0,10,0"
                                             Header="MSBuild:"
                                             Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <AduSkin:AduComboBox ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding SelectedMSBuildVersion}">
+                                            <AduSkin:AduComboBox
+                                                ItemsSource="{Binding DataContext.MSBuildVersions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                SelectedItem="{Binding SelectedMSBuildVersion}">
                                                 <AduSkin:AduComboBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <TextBlock Text="{Binding DisplayName}" />
@@ -384,7 +402,9 @@
                                             Margin="0,0,10,0"
                                             Header="Config:"
                                             Visibility="{Binding IsDotNetProject, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <AduSkin:AduComboBox ItemsSource="{Binding DataContext.ConfigurationTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Configuration}" />
+                                            <AduSkin:AduComboBox
+                                                ItemsSource="{Binding DataContext.ConfigurationTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                SelectedItem="{Binding Configuration}" />
                                         </AduSkin:AduFormBox>
                                         <!--  执行文件路径  -->
                                         <AduSkin:AduFormBox Grid.Column="2" Header="ExecuteFile:">
@@ -415,20 +435,58 @@
                                                 ToolTip="输入该项目的提交信息" />
                                         </AduSkin:AduFormBox>
                                     </Grid>
+                                    <!--  改动文件列表  -->
+                                    <Border
+                                        x:Name="ChangedFilesPanel"
+                                        Margin="0,8,0,0"
+                                        Padding="8"
+                                        Background="#F5F5F5"
+                                        BorderBrush="#E0E0E0"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Visibility="Collapsed">
+                                        <StackPanel>
+                                            <TextBlock
+                                                FontSize="11"
+                                                FontWeight="SemiBold"
+                                                Foreground="#666"
+                                                Text="改动文件:" />
+                                            <ItemsControl
+                                                Margin="0,4,0,0"
+                                                MaxHeight="150"
+                                                ItemsSource="{Binding ChangedFiles}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock
+                                                            FontSize="10"
+                                                            Foreground="#555"
+                                                            Text="{Binding}"
+                                                            TextTrimming="CharacterEllipsis"
+                                                            ToolTip="{Binding}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
                                 </StackPanel>
                             </AduSkin:AduExpander.Content>
                         </AduSkin:AduExpander>
                         <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding HasError}" Value="True">
-                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                                <Setter TargetName="ItemBorder" Property="BorderBrush"
+                                        Value="{DynamicResource ErrorBrush}" />
                                 <Setter TargetName="ErrorPanel" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding HasChanges}" Value="True">
-                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource WarnBrush}" />
+                                <Setter TargetName="ItemBorder" Property="BorderBrush"
+                                        Value="{DynamicResource WarnBrush}" />
                                 <Setter TargetName="ChangePanel" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding HasChanges}" Value="False">
                                 <Setter TargetName="txtNotChange" Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding HasChangedFiles}" Value="True">
+                                <Setter TargetName="ChangedFilesPanel" Property="Visibility" Value="Visible" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding IsSyncing}" Value="True">
                                 <Setter TargetName="txtSyncingStatus" Property="Visibility" Value="Visible" />
