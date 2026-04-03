@@ -126,6 +126,23 @@ namespace DotNetBuilder.ViewModels
             }
         }
 
+        /// <summary>
+        /// 将项目移动到指定索引位置（用于拖拽排序）
+        /// </summary>
+        public void MoveTo(GitProject project, int targetIndex)
+        {
+            if (project == null) return;
+
+            var currentIndex = Projects.IndexOf(project);
+            if (currentIndex < 0 || currentIndex == targetIndex) return;
+
+            // 确保索引在有效范围内
+            targetIndex = Math.Max(0, Math.Min(targetIndex, Projects.Count - 1));
+
+            Projects.Move(currentIndex, targetIndex);
+            UpdateSortOrders();
+        }
+
         [RelayCommand]
         private void RemoveProject(GitProject? project)
         {

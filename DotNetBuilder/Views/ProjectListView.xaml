@@ -67,6 +67,7 @@
 
             <!--  项目列表  -->
             <AduSkin:AduListBox
+                x:Name="ProjectListBox"
                 Grid.Row="1"
                 Padding="0,4"
                 AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
@@ -91,6 +92,11 @@
                         <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Padding" Value="0" />
+                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListBoxItem_PreviewMouseLeftButtonDown" />
+                        <EventSetter Event="PreviewMouseMove" Handler="ListBoxItem_PreviewMouseMove" />
+                        <EventSetter Event="DragOver" Handler="ListBoxItem_DragOver" />
+                        <EventSetter Event="Drop" Handler="ListBoxItem_Drop" />
+                        <Setter Property="AllowDrop" Value="True" />
                         <EventSetter Event="PreviewMouseRightButtonUp" Handler="ListBoxItem_PreviewMouseRightButtonUp" />
                     </Style>
                 </AduSkin:AduListBox.ItemContainerStyle>
@@ -160,7 +166,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="80" />
                                         <ColumnDefinition Width="80" />
-                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="124" />
                                     </Grid.ColumnDefinitions>
 
                                     <!--  勾选框  -->
@@ -254,10 +260,10 @@
                                     <!--  操作按钮  -->
                                     <StackPanel
                                         Grid.Column="4"
-                                        HorizontalAlignment="Left"
+                                        HorizontalAlignment="Right"
                                         VerticalAlignment="Center"
                                         Orientation="Horizontal">
-                                        <AduSkin:AduPathIconButton
+                                        <!--<AduSkin:AduPathIconButton
                                             Margin="0,0,5,0"
                                             AduAttach:PathDataAttach.PathData="{DynamicResource Icon_MoveUp}"
                                             BorderThickness="1"
@@ -272,7 +278,7 @@
                                             Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
                                             FontSize="12"
-                                            ToolTip="下移" />
+                                            ToolTip="下移" />-->
                                         <Grid>
                                             <AduSkin:AduPathIconButton
                                                 AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource NormalForeground}"
@@ -336,6 +342,12 @@
                                                 IsActived="{Binding IsCommitting}"
                                                 Type="Apple" />
                                         </Grid>
+                                        <Path
+                                            Width="12"
+                                            Margin="10,0"
+                                            Data="{DynamicResource Icon_Move}"
+                                            Fill="{DynamicResource PrimaryBrush}"
+                                            Stretch="Uniform" />
                                     </StackPanel>
                                 </Grid>
                             </AduSkin:AduExpander.Header>
@@ -417,6 +429,7 @@
                                             x:Name="ChangePanel"
                                             Margin="0,0,0,0"
                                             AduAttach:HeaderAttach.VerticalAlignment="Top"
+                                            AduAttach:HeaderAttach.Width="50"
                                             Header="Commit: "
                                             Visibility="Collapsed">
                                             <AduSkin:AduTextBox
@@ -429,38 +442,22 @@
                                         </AduSkin:AduFormBox>
                                     </Grid>
                                     <!--  改动文件列表  -->
-                                    <Border
+                                    <AduSkin:AduFormBox
                                         x:Name="ChangedFilesPanel"
-                                        Margin="0,8,0,0"
-                                        Padding="8"
-                                        Background="#F5F5F5"
-                                        BorderBrush="#E0E0E0"
-                                        BorderThickness="1"
-                                        CornerRadius="6"
+                                        AduAttach:HeaderAttach.Padding="0,8,0,0"
+                                        AduAttach:HeaderAttach.VerticalAlignment="Top"
+                                        AduAttach:HeaderAttach.Width="50"
+                                        Header="Modify:"
                                         Visibility="Collapsed">
-                                        <StackPanel>
-                                            <TextBlock
-                                                FontSize="11"
-                                                FontWeight="SemiBold"
-                                                Foreground="#666"
-                                                Text="改动文件:" />
-                                            <ItemsControl
-                                                MaxHeight="150"
-                                                Margin="0,4,0,0"
-                                                ItemsSource="{Binding ChangedFiles}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <TextBlock
-                                                            FontSize="10"
-                                                            Foreground="#555"
-                                                            Text="{Binding}"
-                                                            TextTrimming="CharacterEllipsis"
-                                                            ToolTip="{Binding}" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-                                    </Border>
+                                        <AduSkin:AduListBox
+                                            MaxHeight="150"
+                                            Margin="0,8,0,4"
+                                            Padding="2"
+                                            AduAttach:BorderAttach.CornerRadius="6"
+                                            Background="{DynamicResource PanelBackground}"
+                                            BorderThickness="1"
+                                            ItemsSource="{Binding ChangedFiles}" />
+                                    </AduSkin:AduFormBox>
                                 </StackPanel>
                             </AduSkin:AduExpander.Content>
                         </AduSkin:AduExpander>
