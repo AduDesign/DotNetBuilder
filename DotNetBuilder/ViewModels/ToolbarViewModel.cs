@@ -75,7 +75,7 @@ namespace DotNetBuilder.ViewModels
 
         [RelayCommand(CanExecute = nameof(CanRefreshStatus))]
         private async Task RefreshStatus()
-        {
+        { 
             if (_onRefreshStatus != null)
                 await _onRefreshStatus();
         }

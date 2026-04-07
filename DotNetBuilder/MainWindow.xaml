@@ -7,8 +7,8 @@
     xmlns:Interactivity="clr-namespace:AduSkin.Interactivity;assembly=AduSkin"
     xmlns:views="clr-namespace:DotNetBuilder.Views"
     x:Name="RootWindow"
-    Title=".NET Project Builder"
-    Width="560"
+    Title=".NET Builder"
+    Width="700"
     Height="800"
     MinWidth="560"
     MinHeight="600"
@@ -108,6 +108,22 @@
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>
+            <AduSkin:AduTitleMenuItem Header="操作(_A)">
+                <AduSkin:AduMenuItem
+                    Command="{Binding ToolbarViewModel.ScanAndAddProjectsCommand}"
+                    Header="扫描Git目录"
+                    ToolTip="选择文件夹，扫描其中的 Git 项目并添加（不重复）" />
+                <AduSkin:AduMenuItem
+                    Command="{Binding ToolbarViewModel.AddProjectCommand}"
+                    Header="添加 Git 项目"
+                    ToolTip="从根目录下扫描 Git 项目" />
+                <AduSkin:AduMenuItem
+                    Command="{Binding ToolbarViewModel.CloneProjectCommand}"
+                    Header="克隆项目"
+                    ToolTip="从 Git URL 克隆仓库" />
+                <Separator />
+                <AduSkin:AduMenuItem Command="{Binding ToolbarViewModel.RefreshStatusCommand}" Header="刷新状态" />
+            </AduSkin:AduTitleMenuItem>
             <AduSkin:AduTitleMenuItem Header="编辑(_E)">
                 <AduSkin:AduMenuItem Command="{Binding ClearLogCommand}" Header="清空日志">
                     <AduSkin:AduMenuItem.Icon>
@@ -141,6 +157,15 @@
                     </AduSkin:AduMenuItem.Icon>
                 </AduSkin:AduMenuItem>
             </AduSkin:AduTitleMenuItem>
+            <AduSkin:AduTitleMenuItem ToolTip="{Binding ToolbarViewModel.SelectedPath}">
+                <AduSkin:AduTitleMenuItem.Header>
+                    <AduSkin:AduEditableTextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="Bold"
+                        Text="{Binding ToolbarViewModel.ProjectDisplayName}" />
+                </AduSkin:AduTitleMenuItem.Header>
+            </AduSkin:AduTitleMenuItem>
         </AduSkin:AduTitleMenu>
     </AduSkin:AduWindow.Menu>
     <Interactivity:Interaction.Triggers>
@@ -151,7 +176,6 @@
 
     <Grid Background="{DynamicResource PanelBackground}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition
@@ -160,16 +184,13 @@
                 MaxHeight="600" />
         </Grid.RowDefinitions>
 
-        <!--  工具栏（项目已打开时显示）  -->
-        <views:ToolbarView Grid.Row="0" DataContext="{Binding ToolbarViewModel}" />
-
         <!--  项目列表（项目已打开时显示）  -->
-        <views:ProjectListView Grid.Row="1" DataContext="{Binding ProjectListViewModel}" />
+        <views:ProjectListView Grid.Row="0" DataContext="{Binding ProjectListViewModel}" />
 
-        <AduSkin:AduGridSplitter Grid.Row="2" ResizeDirection="Rows" />
+        <AduSkin:AduGridSplitter Grid.Row="1" ResizeDirection="Rows" />
 
         <!--  底部输出面板  -->
-        <Grid Grid.Row="3">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -184,20 +205,20 @@
 
         <!--  欢迎页面（无项目时显示）  -->
         <views:WelcomeView
-            Grid.RowSpan="4"
+            Grid.RowSpan="3"
             Background="White"
             DataContext="{Binding WelcomeViewModel}"
             Visibility="{Binding DataContext.HasProject, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToReVisibility}}" />
 
         <!--  新建项目对话框  -->
-        <views:NewProjectDialogView Grid.RowSpan="4" DataContext="{Binding NewProjectViewModel}" />
+        <views:NewProjectDialogView Grid.RowSpan="3" DataContext="{Binding NewProjectViewModel}" />
 
         <!--  克隆仓库对话框  -->
-        <views:CloneDialogView Grid.RowSpan="4" DataContext="{Binding CloneDialogViewModel}" />
+        <views:CloneDialogView Grid.RowSpan="3" DataContext="{Binding CloneDialogViewModel}" />
 
         <!--  加载中遮罩  -->
         <Border
-            Grid.RowSpan="4"
+            Grid.RowSpan="3"
             Background="#90FFFFFF"
             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">

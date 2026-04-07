@@ -72,6 +72,9 @@
                 Padding="0,4"
                 AduAttach:BackgroundAttach.MouseOverBackground="Transparent"
                 AduAttach:BackgroundAttach.SelectedBackground="{DynamicResource PrimaryBrush05}"
+                AduAttach:DragDropAttach.IsDragSource="True"
+                AduAttach:DragDropAttach.IsDropTarget="True"
+                AduAttach:DragDropAttach.ReorderMode="Move"
                 ItemsSource="{Binding Projects}"
                 SelectedItem="{Binding SelectedProject}">
                 <AduSkin:AduListBox.Resources>
@@ -92,12 +95,6 @@
                         <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="8" />
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Padding" Value="0" />
-                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="ListBoxItem_PreviewMouseLeftButtonDown" />
-                        <EventSetter Event="PreviewMouseMove" Handler="ListBoxItem_PreviewMouseMove" />
-                        <EventSetter Event="DragOver" Handler="ListBoxItem_DragOver" />
-                        <EventSetter Event="Drop" Handler="ListBoxItem_Drop" />
-                        <Setter Property="AllowDrop" Value="True" />
-                        <EventSetter Event="PreviewMouseRightButtonUp" Handler="ListBoxItem_PreviewMouseRightButtonUp" />
                     </Style>
                 </AduSkin:AduListBox.ItemContainerStyle>
                 <AduSkin:AduListBox.ContextMenu>
@@ -342,12 +339,6 @@
                                                 IsActived="{Binding IsCommitting}"
                                                 Type="Apple" />
                                         </Grid>
-                                        <Path
-                                            Width="12"
-                                            Margin="10,0"
-                                            Data="{DynamicResource Icon_Move}"
-                                            Fill="{DynamicResource PrimaryBrush}"
-                                            Stretch="Uniform" />
                                     </StackPanel>
                                 </Grid>
                             </AduSkin:AduExpander.Header>
