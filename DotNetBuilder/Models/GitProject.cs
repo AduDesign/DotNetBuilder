@@ -1,5 +1,7 @@
+using System.Collections;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using AduSkin.AdditionalAttributes;
 using DotNetBuilder.Services;
 
 namespace DotNetBuilder.Models
@@ -7,7 +9,7 @@ namespace DotNetBuilder.Models
     /// <summary>
     /// Git项目模型
     /// </summary>
-    public class GitProject : INotifyPropertyChanged
+    public class GitProject : INotifyPropertyChanged, IDroppedItem
     {
         private bool _isSelected = true;
         private bool _hasChanges;
@@ -17,6 +19,11 @@ namespace DotNetBuilder.Models
         private bool _isBuilding;
         private bool _isRemoved;
         private string _errorMessage = string.Empty;
+
+        /// <summary>
+        /// 源集合（用于拖拽排序，由 AduSkin DragDropAttach 自动设置）
+        /// </summary>
+        public IList? SourceCollection { get; set; }
 
         /// <summary>
         /// 项目名称
