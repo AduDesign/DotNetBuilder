@@ -72,11 +72,6 @@
             HorizontalContentAlignment="Stretch"
             ItemsSource="{Binding RecentProjects}"
             SelectedItem="{Binding SelectedProject}">
-            <Interactivity:Interaction.Triggers>
-                <Interactivity:EventTrigger EventName="MouseDoubleClick">
-                    <Interactivity:EventToCommand Command="{Binding OpenRecentProjectCommand}" CommandParameter="{Binding SelectedProject}" />
-                </Interactivity:EventTrigger>
-            </Interactivity:Interaction.Triggers>
             <AduSkin:AduListBox.ItemTemplate>
                 <DataTemplate>
                     <AduSkin:AduButton
