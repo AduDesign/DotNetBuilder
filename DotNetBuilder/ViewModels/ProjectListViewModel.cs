@@ -429,6 +429,7 @@ namespace DotNetBuilder.ViewModels
                 project.PullStrategy = config.PullStrategy;
                 project.ConflictAction = config.ConflictAction;
                 project.AutoCommitWhenNoMessage = config.AutoCommitWhenNoMessage;
+                project.OutputDirectory = config.OutputDirectory ?? string.Empty;
                 project.SetIsSelected(config.IsSelected);
 
                 // 恢复 MSBuild 版本
@@ -697,6 +698,22 @@ namespace DotNetBuilder.ViewModels
             {
                 AppendLog($"[{project.Name}] 刷新状态失败: {ex.Message}\n");
             }
+        }
+
+        [RelayCommand]
+        private void Pack(GitProject? project)
+        {
+            GitProject? targetProject = project ?? SelectedProject;
+            if (targetProject == null) return;
+
+            var packWindow = new Views.PackWindow();
+            packWindow.Initialize(
+                targetProject.Name,
+               targetProject.OutputDirectory,
+                string.IsNullOrEmpty(targetProject.OutputDirectory) ? null : targetProject.OutputDirectory);
+
+            // 显示窗口
+            packWindow.ShowDialog();
         }
 
         #endregion

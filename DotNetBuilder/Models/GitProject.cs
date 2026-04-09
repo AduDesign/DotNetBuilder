@@ -334,6 +334,24 @@ namespace DotNetBuilder.Models
             }
         }
 
+        private string _outputDirectory = string.Empty;
+
+        /// <summary>
+        /// 打包输出目录
+        /// </summary>
+        public string OutputDirectory
+        {
+            get => _outputDirectory;
+            set
+            {
+                if (_outputDirectory != value)
+                {
+                    _outputDirectory = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         private RemoteStatusInfo? _remoteStatus;
 
         /// <summary>

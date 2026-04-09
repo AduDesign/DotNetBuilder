@@ -120,7 +120,8 @@ namespace DotNetBuilder.Services
                         Order = p.SortOrder,
                         PullStrategy = p.PullStrategy,
                         ConflictAction = p.ConflictAction,
-                        AutoCommitWhenNoMessage = p.AutoCommitWhenNoMessage
+                        AutoCommitWhenNoMessage = p.AutoCommitWhenNoMessage,
+                        OutputDirectory = p.OutputDirectory
                     }).ToList()
                 };
 

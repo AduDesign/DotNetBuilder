@@ -113,6 +113,11 @@ namespace DotNetBuilder.Models
         /// 无提交信息时自动提交
         /// </summary>
         public bool AutoCommitWhenNoMessage { get; set; }
+
+        /// <summary>
+        /// 打包输出目录
+        /// </summary>
+        public string? OutputDirectory { get; set; }
     }
 
     /// <summary>

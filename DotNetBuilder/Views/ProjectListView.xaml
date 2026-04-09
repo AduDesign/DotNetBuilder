@@ -408,6 +408,25 @@
                                         </AduSkin:AduFormBox>
                                     </Grid>
                                     <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition />
+                                            <ColumnDefinition Width="130" />
+                                            <ColumnDefinition />
+                                        </Grid.ColumnDefinitions>
+                                        <!--  输出目录  -->
+                                        <AduSkin:AduFormBox
+                                            Grid.Column="0"
+                                            Margin="0,0,10,0"
+                                            Header="OutputDir:">
+                                            <AduSkin:AduChooseBox
+                                                Height="30"
+                                                ChooseType="Folder"
+                                                Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}"
+                                                ToolTip="打包输出目录，留空则使用项目目录" />
+                                        </AduSkin:AduFormBox>
+                                        <Grid Grid.Column="2" />
+                                    </Grid>
+                                    <Grid Margin="0,4,0,0">
                                         <TextBlock
                                             x:Name="txtNotChange"
                                             Margin="0,10"
@@ -524,6 +543,12 @@
                                 Command="{Binding RunSelectedCommand}"
                                 CommandParameter="{Binding SelectedProject}"
                                 ToolTip="运行项目" />
+                            <AduSkin:AduPathIconButton
+                                AduAttach:PathDataAttach.PathData="{DynamicResource Icon_7z}"
+                                AduAttach:PathDataAttach.Width="13"
+                                Command="{Binding PackCommand}"
+                                CommandParameter="{Binding SelectedProject}"
+                                ToolTip="打包项目" />
                         </StackPanel>
                         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                             <AduSkin:AduToggleButton

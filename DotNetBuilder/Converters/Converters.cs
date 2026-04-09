@@ -251,4 +251,110 @@ namespace DotNetBuilder.Converters
             throw new NotImplementedException();
         }
     }
+
+    /// <summary>
+    /// 判断是否为目录并转换为图标路径数据（文件夹图标）
+    /// </summary>
+    public class IsDirectoryToIconConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isDirectory && isDirectory)
+            {
+                // 文件夹图标 - Segoe MDL2 Assets
+                return Geometry.Parse("M10,4H4C2.9,4 2,4.9 2,6V18C2,19.1 2.9,20 4,20H20C21.1,20 22,19.1 22,18V8C22,6.9 21.1,6 20,6H12L10,4Z");
+            }
+            // 文件图标
+            return Geometry.Parse("M14,2H6C4.9,2 4,2.9 4,4V20C4,21.1 4.9,22 6,22H18C19.1,22 20,21.1 20,20V8L14,2M18,20H6V4H13V9H18V20Z");
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 判断是否为目录并转换为图标颜色
+    /// </summary>
+    public class IsDirectoryToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isDirectory && isDirectory)
+            {
+                return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FFC107")); // 黄色 - 文件夹
+            }
+            return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#90CAF9")); // 蓝色 - 文件
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 7z 状态转换为颜色（绿色可用，红色不可用）
+    /// </summary>
+    public class BoolToStatusBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isAvailable)
+            {
+                if (isAvailable)
+                {
+                    return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50")); // 绿色
+                }
+                return new SolidColorBrush((Color)ColorConverter.ConvertFromString("#F44336")); // 红色
+            }
+            return new SolidColorBrush(Colors.Gray);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 7z 状态转换为文本
+    /// </summary>
+    public class BoolToStatusTextConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isAvailable)
+            {
+                return isAvailable ? "✓ 7z 已就绪" : "✗ 7z 未安装";
+            }
+            return "状态未知";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    /// <summary>
+    /// 打包按钮文本转换器
+    /// </summary>
+    public class BoolToPackButtonTextConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is bool isPacking)
+            {
+                return isPacking ? "压缩中..." : "开始打包";
+            }
+            return "开始打包";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
