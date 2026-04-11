@@ -11,7 +11,7 @@ namespace DotNetBuilder.ViewModels
     /// <summary>
     /// 打包窗口的 ViewModel
     /// </summary>
-    public class PackWindowViewModel : INotifyPropertyChanged
+    public class PackWindowViewModel : ObservableObject
     {
         private readonly PackService _packService;
 
@@ -24,14 +24,7 @@ namespace DotNetBuilder.ViewModels
             SelectAllCommand = new RelayCommand(() => SetAllSelected(true));
             UnselectAllCommand = new RelayCommand(() => SetAllSelected(false));
         }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        public Action<bool>? CloseAction;
-
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        public Action<bool>? CloseAction; 
 
         protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {

@@ -1,5 +1,4 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DotNetBuilder.Models
 {
@@ -42,7 +41,7 @@ namespace DotNetBuilder.Models
     /// <summary>
     /// 更改的文件信息
     /// </summary>
-    public class ChangedFile : INotifyPropertyChanged
+    public class ChangedFile : ObservableObject
     {
         private bool _isSelected = true;
 
@@ -119,11 +118,18 @@ namespace DotNetBuilder.Models
             _ => "#666666"
         };
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+        /// <summary>
+        /// 是否可以撤销（已跟踪文件的修改/删除/重命名/冲突可以撤销到上一个提交状态）
+        /// </summary>
+        public bool CanRevert => Status is FileChangeStatus.Modified
+                              or FileChangeStatus.Deleted
+                              or FileChangeStatus.Renamed
+                              or FileChangeStatus.Conflicted;
 
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        /// <summary>
+        /// 是否可以删除（新增或未跟踪的文件可以删除）
+        /// </summary>
+        public bool CanDelete => Status is FileChangeStatus.Added
+                              or FileChangeStatus.Untracked;
     }
 }

@@ -554,6 +554,7 @@
                                                                 Grid.Column="2"
                                                                 Orientation="Horizontal"
                                                                 Visibility="Collapsed">
+                                                                <!--  撤销按钮（仅修改/删除/重命名/冲突文件显示）  -->
                                                                 <AduSkin:AduPathIconButton
                                                                     Width="20"
                                                                     Height="20"
@@ -565,7 +566,9 @@
                                                                     BorderThickness="0"
                                                                     Command="{Binding DataContext.RevertFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
-                                                                    ToolTip="撤销此文件更改" />
+                                                                    ToolTip="撤销此文件更改"
+                                                                    Visibility="{Binding CanRevert, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                                                <!--  删除按钮（仅新增/未跟踪文件显示）  -->
                                                                 <AduSkin:AduPathIconButton
                                                                     Width="20"
                                                                     Height="20"
@@ -577,7 +580,8 @@
                                                                     BorderThickness="0"
                                                                     Command="{Binding DataContext.DeleteFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}"
-                                                                    ToolTip="删除此文件" />
+                                                                    ToolTip="删除此文件"
+                                                                    Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibilityConverter}}" />
                                                             </StackPanel>
 
                                                             <!--  状态标签  -->
