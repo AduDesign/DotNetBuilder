@@ -1,7 +1,7 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Xml.Linq;
 using DotNetBuilder.Models;
 
@@ -206,17 +206,51 @@ namespace DotNetBuilder.Services
                     result.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length;
 
                 // 解析改动文件列表
-                var changedFiles = new List<string>();
+                var changedFiles = new ObservableCollection<ChangedFile>();
                 if (!string.IsNullOrWhiteSpace(result))
                 {
                     var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                     foreach (var line in lines)
                     {
                         // 格式: "XY filename" 如 "M  file.cs", "A  new.cs", "?? untracked.cs"
-                        var parts = line.Split(' ', 2);
-                        if (parts.Length >= 2)
+                        // X = index status, Y = work tree status
+                        if (line.Length < 3) continue;
+
+                        var xyStatus = line.Substring(0, 2);
+                        var filePath = line.Substring(3).Trim();
+
+                        // 处理重命名情况 "R  old -> new"
+                        string? oldPath = null;
+                        if (xyStatus[0] == 'R' && filePath.Contains(" -> "))
                         {
-                            changedFiles.Add(parts[1].Trim());
+                            var parts = filePath.Split(new[] { " -> " }, 2, StringSplitOptions.None);
+                            if (parts.Length == 2)
+                            {
+                                oldPath = parts[0];
+                                filePath = parts[1];
+                            }
+                        }
+
+                        var status = ParseFileStatus(xyStatus);
+
+                        changedFiles.Add(new ChangedFile
+                        {
+                            FilePath = filePath,
+                            Status = status,
+                            RawStatus = xyStatus,
+                            IsSelected = true
+                        });
+
+                        // 如果是重命名，也添加旧文件记录
+                        if (oldPath != null)
+                        {
+                            changedFiles.Add(new ChangedFile
+                            {
+                                FilePath = oldPath + " → " + filePath,
+                                Status = FileChangeStatus.Renamed,
+                                RawStatus = xyStatus,
+                                IsSelected = true
+                            });
                         }
                     }
                 }
@@ -231,8 +265,133 @@ namespace DotNetBuilder.Services
             {
                 project.IsExpanded = project.HasChanges = false;
                 project.ChangesCount = 0;
-                project.ChangedFiles = new List<string>();
+                project.ChangedFiles = new ObservableCollection<ChangedFile>();
             }
+        }
+
+        /// <summary>
+        /// 解析 git status 的 XY 状态码
+        /// </summary>
+        private FileChangeStatus ParseFileStatus(string xyStatus)
+        {
+            if (xyStatus.Length < 2) return FileChangeStatus.Modified;
+
+            var x = xyStatus[0]; // index status
+            var y = xyStatus[1]; // work tree status
+
+            // 优先检查工作区状态（y）
+            if (y == 'D' || x == 'D') return FileChangeStatus.Deleted;
+            if (y == 'A' || x == 'A') return FileChangeStatus.Added;
+            if (x == 'R') return FileChangeStatus.Renamed;
+            if (x == 'C' || y == 'C') return FileChangeStatus.Conflicted;
+            if (y == '?') return FileChangeStatus.Untracked;
+            if (y == 'M' || x == 'M') return FileChangeStatus.Modified;
+
+            // 默认返回修改
+            return FileChangeStatus.Modified;
+        }
+
+        /// <summary>
+        /// 撤销单个文件的更改
+        /// </summary>
+        public async Task<bool> RevertFileAsync(string projectPath, string filePath, FileChangeStatus status)
+        {
+            try
+            {
+                string command;
+                if (status == FileChangeStatus.Untracked)
+                {
+                    // 未跟踪文件：直接删除
+                    var fullPath = Path.Combine(projectPath, filePath);
+                    if (File.Exists(fullPath))
+                        File.Delete(fullPath);
+                    else if (Directory.Exists(fullPath))
+                        Directory.Delete(fullPath, true);
+                    return true;
+                }
+                else if (status == FileChangeStatus.Added)
+                {
+                    // 新增文件：从暂存区移除并删除
+                    command = $"rm --cached \"{filePath}\"";
+                    await RunGitCommandAsync(projectPath, command);
+
+                    // 删除实际文件
+                    var fullPath = System.IO.Path.Combine(projectPath, filePath);
+                    if (System.IO.File.Exists(fullPath))
+                    {
+                        System.IO.File.Delete(fullPath);
+                    }
+                }
+                else
+                {
+                    // 修改或删除：恢复到最近提交的版本
+                    command = $"checkout HEAD -- \"{filePath}\"";
+                    await RunGitCommandAsync(projectPath, command);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 删除单个文件（从磁盘删除）
+        /// </summary>
+        public async Task<bool> DeleteFileAsync(string projectPath, string filePath)
+        {
+            try
+            {
+                var fullPath = System.IO.Path.Combine(projectPath, filePath);
+                if (System.IO.File.Exists(fullPath))
+                {
+                    System.IO.File.Delete(fullPath);
+                    return true;
+                }
+                else if (System.IO.Directory.Exists(fullPath))
+                {
+                    System.IO.Directory.Delete(fullPath, true);
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 撤销多个文件的更改
+        /// </summary>
+        public async Task<int> RevertFilesAsync(string projectPath, IEnumerable<ChangedFile> files)
+        {
+            int successCount = 0;
+            foreach (var file in files.Where(f => f.IsSelected))
+            {
+                if (await RevertFileAsync(projectPath, file.FilePath, file.Status))
+                {
+                    successCount++;
+                }
+            }
+            return successCount;
+        }
+
+        /// <summary>
+        /// 删除多个文件
+        /// </summary>
+        public async Task<int> DeleteFilesAsync(string projectPath, IEnumerable<ChangedFile> files)
+        {
+            int successCount = 0;
+            foreach (var file in files.Where(f => f.IsSelected))
+            {
+                if (await DeleteFileAsync(projectPath, file.FilePath))
+                {
+                    successCount++;
+                }
+            }
+            return successCount;
         }
 
         /// <summary>

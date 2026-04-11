@@ -4,9 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:AduAttach="clr-namespace:AduSkin.AdditionalAttributes;assembly=AduSkin"
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin">
-
     <Border
-        Margin="10"
+        Margin="10,0,10,10"
         Padding="6"
         BorderBrush="{DynamicResource NormalBorderBrush}"
         BorderThickness="1"
@@ -459,14 +458,147 @@
                                         AduAttach:HeaderAttach.Width="50"
                                         Header="Modify:"
                                         Visibility="Collapsed">
-                                        <AduSkin:AduListBox
-                                            MaxHeight="150"
-                                            Margin="0,8,0,4"
-                                            Padding="2"
-                                            AduAttach:BorderAttach.CornerRadius="6"
-                                            Background="{DynamicResource PanelBackground}"
-                                            BorderThickness="1"
-                                            ItemsSource="{Binding ChangedFiles}" />
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="*" />
+                                            </Grid.RowDefinitions>
+                                            <!--  批量操作按钮  -->
+                                            <StackPanel
+                                                Grid.Row="0"
+                                                Margin="0,4"
+                                                Orientation="Horizontal">
+                                                <AduSkin:AduPathIconButton
+                                                    Width="24"
+                                                    Height="24"
+                                                    Margin="0,0,4,0"
+                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
+                                                    AduAttach:PathDataAttach.Margin="0"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Undo}"
+                                                    AduAttach:PathDataAttach.Width="14"
+                                                    BorderThickness="0"
+                                                    Command="{Binding DataContext.RevertSelectedFilesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="撤销选中文件" />
+                                                <AduSkin:AduPathIconButton
+                                                    Width="24"
+                                                    Height="24"
+                                                    Margin="0,0,4,0"
+                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
+                                                    AduAttach:PathDataAttach.Margin="0"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Delete}"
+                                                    AduAttach:PathDataAttach.Width="14"
+                                                    BorderThickness="0"
+                                                    Command="{Binding DataContext.DeleteSelectedFilesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="删除选中文件" />
+                                                <AduSkin:AduPathIconButton
+                                                    Width="24"
+                                                    Height="24"
+                                                    AduAttach:PathDataAttach.Margin="0"
+                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Checked}"
+                                                    AduAttach:PathDataAttach.Width="14"
+                                                    BorderThickness="0"
+                                                    Command="{Binding DataContext.ToggleSelectAllFilesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip="全选/取消全选" />
+                                            </StackPanel>
+
+                                            <!--  文件列表  -->
+                                            <AduSkin:AduListBox
+                                                Grid.Row="1"
+                                                MaxHeight="200"
+                                                Margin="0"
+                                                Padding="2"
+                                                AduAttach:BorderAttach.CornerRadius="6"
+                                                Background="{DynamicResource PanelBackground}"
+                                                BorderThickness="1"
+                                                ItemsSource="{Binding ChangedFiles}">
+                                                <AduSkin:AduListBox.ItemContainerStyle>
+                                                    <Style BasedOn="{StaticResource AduListBoxItem}" TargetType="AduSkin:AduListBoxItem">
+                                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                        <Setter Property="Padding" Value="2" />
+                                                        <Setter Property="AduAttach:BorderAttach.CornerRadius" Value="4" />
+                                                    </Style>
+                                                </AduSkin:AduListBox.ItemContainerStyle>
+                                                <AduSkin:AduListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Height="22">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="26" />
+                                                            </Grid.ColumnDefinitions>
+
+                                                            <!--  勾选框  -->
+                                                            <AduSkin:AduCheckBox
+                                                                Grid.Column="0"
+                                                                Margin="6,1,6,0"
+                                                                VerticalAlignment="Center"
+                                                                Content=""
+                                                                IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                                                            <!--  文件路径  -->
+                                                            <TextBlock
+                                                                Grid.Column="1"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="11"
+                                                                Text="{Binding FilePath}"
+                                                                TextTrimming="CharacterEllipsis"
+                                                                ToolTip="{Binding FilePath}" />
+
+                                                            <!--  操作按钮  -->
+                                                            <StackPanel
+                                                                x:Name="tools"
+                                                                Grid.Column="2"
+                                                                Orientation="Horizontal"
+                                                                Visibility="Collapsed">
+                                                                <AduSkin:AduPathIconButton
+                                                                    Width="20"
+                                                                    Height="20"
+                                                                    Margin="2,0"
+                                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource WarnBrush}"
+                                                                    AduAttach:PathDataAttach.Margin="0"
+                                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Undo}"
+                                                                    AduAttach:PathDataAttach.Width="12"
+                                                                    BorderThickness="0"
+                                                                    Command="{Binding DataContext.RevertFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="撤销此文件更改" />
+                                                                <AduSkin:AduPathIconButton
+                                                                    Width="20"
+                                                                    Height="20"
+                                                                    Margin="2,0"
+                                                                    AduAttach:PathBrushAttach.NormalPathBrush="{DynamicResource ErrorBrush}"
+                                                                    AduAttach:PathDataAttach.Margin="0"
+                                                                    AduAttach:PathDataAttach.PathData="{DynamicResource Icon_Delete}"
+                                                                    AduAttach:PathDataAttach.Width="12"
+                                                                    BorderThickness="0"
+                                                                    Command="{Binding DataContext.DeleteFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    ToolTip="删除此文件" />
+                                                            </StackPanel>
+
+                                                            <!--  状态标签  -->
+                                                            <TextBlock
+                                                                Grid.Column="3"
+                                                                VerticalAlignment="Center"
+                                                                FontSize="10"
+                                                                Foreground="{Binding StatusColor}"
+                                                                Text="{Binding StatusShortText}"
+                                                                TextAlignment="Center"
+                                                                ToolTip="{Binding StatusText}" />
+                                                        </Grid>
+                                                        <DataTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="tools" Property="Visibility" Value="Visible" />
+                                                            </Trigger>
+                                                        </DataTemplate.Triggers>
+                                                    </DataTemplate>
+                                                </AduSkin:AduListBox.ItemTemplate>
+                                            </AduSkin:AduListBox>
+                                        </Grid>
                                     </AduSkin:AduFormBox>
                                 </StackPanel>
                             </AduSkin:AduExpander.Content>

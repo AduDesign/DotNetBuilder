@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using AduSkin.AdditionalAttributes;
@@ -426,9 +427,11 @@ namespace DotNetBuilder.Models
         /// <summary>
         /// 本地改动文件列表
         /// </summary>
-        private List<string> _changedFiles = new();
-
-        public List<string> ChangedFiles
+        private ObservableCollection<ChangedFile> _changedFiles = new();
+        /// <summary>
+        /// 更改列表
+        /// </summary>
+        public ObservableCollection<ChangedFile> ChangedFiles
         {
             get => _changedFiles;
             set
@@ -439,6 +442,7 @@ namespace DotNetBuilder.Models
                     OnPropertyChanged();
                     OnPropertyChanged(nameof(ChangedFilesDisplay));
                     OnPropertyChanged(nameof(HasChangedFiles));
+                    OnPropertyChanged(nameof(HasSelectedChangedFiles));
                 }
             }
         }
@@ -447,13 +451,18 @@ namespace DotNetBuilder.Models
         /// 改动文件显示文本
         /// </summary>
         public string ChangedFilesDisplay => ChangesCount > 0
-            ? string.Join("\n", ChangedFiles.Take(20)) + (ChangesCount > 20 ? $"\n... 还有 {ChangesCount - 20} 个文件" : "")
+            ? string.Join("\n", ChangedFiles.Take(20).Select(f => $"{f.StatusText}: {f.FilePath}")) + (ChangesCount > 20 ? $"\n... 还有 {ChangesCount - 20} 个文件" : "")
             : "";
 
         /// <summary>
         /// 是否有改动文件
         /// </summary>
         public bool HasChangedFiles => ChangesCount > 0;
+
+        /// <summary>
+        /// 是否有选中的更改文件
+        /// </summary>
+        public bool HasSelectedChangedFiles => ChangedFiles.Any(f => f.IsSelected);
 
         /// <summary>
         /// 是否有未推送的提交

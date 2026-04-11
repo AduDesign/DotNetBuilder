@@ -4,9 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:AduSkin="clr-namespace:AduSkin.Controls;assembly=AduSkin">
 
-    <Border
-        Background="#80000000"
-        Visibility="{Binding ShowDialog, Converter={StaticResource BoolToVisibilityConverter}}">
+    <Border Background="#80000000" Visibility="{Binding ShowDialog, Converter={StaticResource BoolToVisibilityConverter}}">
         <Border
             Width="400"
             Padding="20"
@@ -48,20 +46,20 @@
                     <AduSkin:AduButton
                         Width="Auto"
                         Margin="0,0,10,0"
-                        Padding="15,8"
+                        Padding="15,0"
                         Background="{DynamicResource PrimaryBrush}"
                         Command="{Binding ResolveConflictOpenVSCommand}"
                         Content="用 VS 打开" />
                     <AduSkin:AduButton
                         Width="Auto"
                         Margin="0,0,10,0"
-                        Padding="15,8"
+                        Padding="15,0"
                         Background="{DynamicResource WarnBrush}"
                         Command="{Binding ResolveConflictAutoStashCommand}"
                         Content="自动 Stash" />
                     <AduSkin:AduButton
                         Width="Auto"
-                        Padding="15,8"
+                        Padding="15,0"
                         Command="{Binding ResolveConflictAbortCommand}"
                         Content="放弃 Pull" />
                 </StackPanel>

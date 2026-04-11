@@ -20,7 +20,7 @@ namespace DotNetBuilder.ViewModels
         private readonly ConflictDialogViewModel _conflictViewModel;
 
         [ObservableProperty]
-        private bool _isBusy; 
+        private bool _isBusy;
 
         [ObservableProperty]
         private GitProject? _selectedProject;
@@ -907,6 +907,166 @@ namespace DotNetBuilder.ViewModels
                     project.IsExpanded = true;
                 });
                 AppendLog($"[{project.Name}] 同步失败: {result.Message}\n");
+            }
+        }
+        #endregion
+
+        #region 文件操作命令 
+        /// <summary>
+        /// 撤销单个文件的更改
+        /// </summary>
+        [RelayCommand]
+        private async Task RevertFileAsync(ChangedFile? file)
+        {
+            if (file == null || SelectedProject == null) return;
+
+            var result = AduMessageBox.Show(
+                $"确定要撤销文件更改吗？\n\n{file.FilePath}\n\n此操作将恢复文件到最近提交的版本。",
+                "确认撤销",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var success = await _gitService.RevertFileAsync(SelectedProject.Path, file.FilePath, file.Status);
+                if (success)
+                {
+                    AppendLog($"[{SelectedProject.Name}] 已撤销: {file.FilePath}\n");
+                    await _gitService.UpdateProjectStatusAsync(SelectedProject);
+                }
+                else
+                {
+                    AppendLog($"[{SelectedProject.Name}] 撤销失败: {file.FilePath}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{SelectedProject.Name}] 撤销异常: {ex.Message}\n");
+            }
+        }
+
+        /// <summary>
+        /// 删除单个文件
+        /// </summary>
+        [RelayCommand]
+        private async Task DeleteFileAsync(ChangedFile? file)
+        {
+            if (file == null || SelectedProject == null) return;
+
+            var result = AduMessageBox.Show(
+                $"确定要删除文件吗？\n\n{file.FilePath}\n\n此操作将永久删除文件，不可恢复！",
+                "确认删除",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var success = await _gitService.DeleteFileAsync(SelectedProject.Path, file.FilePath);
+                if (success)
+                {
+                    AppendLog($"[{SelectedProject.Name}] 已删除: {file.FilePath}\n");
+                    await _gitService.UpdateProjectStatusAsync(SelectedProject);
+                }
+                else
+                {
+                    AppendLog($"[{SelectedProject.Name}] 删除失败: {file.FilePath}\n");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{SelectedProject.Name}] 删除异常: {ex.Message}\n");
+            }
+        }
+
+        /// <summary>
+        /// 撤销选中项目的所有选中文件
+        /// </summary>
+        [RelayCommand]
+        private async Task RevertSelectedFilesAsync(GitProject? project)
+        {
+            var targetProject = project ?? SelectedProject;
+            if (targetProject == null) return;
+
+            var selectedFiles = targetProject.ChangedFiles.Where(f => f.IsSelected).ToList();
+            if (!selectedFiles.Any())
+            {
+                AduToastService.ShowWarning("请先选择要撤销的文件", "提示");
+                return;
+            }
+
+            var result = AduMessageBox.Show(
+                $"确定要撤销 {selectedFiles.Count} 个文件的更改吗？\n\n此操作将恢复选中的文件到最近提交的版本。",
+                "确认撤销",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var successCount = await _gitService.RevertFilesAsync(targetProject.Path, selectedFiles);
+                AppendLog($"[{targetProject.Name}] 已撤销 {successCount}/{selectedFiles.Count} 个文件\n");
+                await _gitService.UpdateProjectStatusAsync(targetProject);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{targetProject.Name}] 批量撤销异常: {ex.Message}\n");
+            }
+        }
+
+        /// <summary>
+        /// 删除选中项目的所有选中文件
+        /// </summary>
+        [RelayCommand]
+        private async Task DeleteSelectedFilesAsync(GitProject? project)
+        {
+            var targetProject = project ?? SelectedProject;
+            if (targetProject == null) return;
+
+            var selectedFiles = targetProject.ChangedFiles.Where(f => f.IsSelected).ToList();
+            if (!selectedFiles.Any())
+            {
+                AduToastService.ShowWarning("请先选择要删除的文件", "提示");
+                return;
+            }
+
+            var result = AduMessageBox.Show(
+                $"确定要删除 {selectedFiles.Count} 个文件吗？\n\n此操作将永久删除文件，不可恢复！",
+                "确认删除",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                var successCount = await _gitService.DeleteFilesAsync(targetProject.Path, selectedFiles);
+                AppendLog($"[{targetProject.Name}] 已删除 {successCount}/{selectedFiles.Count} 个文件\n");
+                await _gitService.UpdateProjectStatusAsync(targetProject);
+            }
+            catch (Exception ex)
+            {
+                AppendLog($"[{targetProject.Name}] 批量删除异常: {ex.Message}\n");
+            }
+        }
+
+        /// <summary>
+        /// 全选/取消全选更改文件
+        /// </summary>
+        [RelayCommand]
+        private void ToggleSelectAllFiles(GitProject? project)
+        {
+            var targetProject = project ?? SelectedProject;
+            if (targetProject == null) return;
+
+            var allSelected = targetProject.ChangedFiles.All(f => f.IsSelected);
+            foreach (var file in targetProject.ChangedFiles)
+            {
+                file.IsSelected = !allSelected;
             }
         }
         #endregion

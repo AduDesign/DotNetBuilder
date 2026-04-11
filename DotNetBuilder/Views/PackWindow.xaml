@@ -9,7 +9,7 @@
     Width="650"
     Height="550"
     Background="{DynamicResource WindowBackground}"
-    WindowStartupLocation="CenterOwner">
+    WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
         <converters:IsDirectoryToIconConverter x:Key="IsDirectoryToIconConverter" />
