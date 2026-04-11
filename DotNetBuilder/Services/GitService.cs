@@ -271,6 +271,7 @@ namespace DotNetBuilder.Services
 
         /// <summary>
         /// 解析 git status 的 XY 状态码
+        /// 注意：X = 索引状态（staging），Y = 工作区状态（work tree）
         /// </summary>
         private FileChangeStatus ParseFileStatus(string xyStatus)
         {
@@ -279,13 +280,40 @@ namespace DotNetBuilder.Services
             var x = xyStatus[0]; // index status
             var y = xyStatus[1]; // work tree status
 
-            // 优先检查工作区状态（y）
-            if (y == 'D' || x == 'D') return FileChangeStatus.Deleted;
-            if (y == 'A' || x == 'A') return FileChangeStatus.Added;
+            // 优先检查索引状态（X）- 这决定了文件的 git 追踪状态
+            // X='A' 表示已暂存的新文件（从未被提交过）
+            if (x == 'A') return FileChangeStatus.Added;
+
+            // X='D' 表示索引中已删除（文件从版本控制中移除）
+            if (x == 'D') return FileChangeStatus.Deleted;
+
+            // X='R' 表示重命名
             if (x == 'R') return FileChangeStatus.Renamed;
-            if (x == 'C' || y == 'C') return FileChangeStatus.Conflicted;
+
+            // X='C' 表示复制
+            if (x == 'C') return FileChangeStatus.Conflicted;
+
+            // X='M' 表示索引中有修改
+            if (x == 'M') return FileChangeStatus.Modified;
+
+            // X='?' 且 Y='?' 表示未跟踪文件
+            if (x == '?' && y == '?') return FileChangeStatus.Untracked;
+
+            // 工作区状态（Y）- 文件在 git 的版本控制中，但工作区有变化
+            // Y='?' 未跟踪（文件存在但未被 git 管理）
             if (y == '?') return FileChangeStatus.Untracked;
-            if (y == 'M' || x == 'M') return FileChangeStatus.Modified;
+
+            // Y='D' 工作区中已删除（但索引中还有）
+            if (y == 'D') return FileChangeStatus.Deleted;
+
+            // Y='M' 工作区中有修改
+            if (y == 'M') return FileChangeStatus.Modified;
+
+            // Y='A' 罕见情况：新增文件
+            if (y == 'A') return FileChangeStatus.Added;
+
+            // Y='C' 冲突
+            if (y == 'C') return FileChangeStatus.Conflicted;
 
             // 默认返回修改
             return FileChangeStatus.Modified;
@@ -294,44 +322,101 @@ namespace DotNetBuilder.Services
         /// <summary>
         /// 撤销单个文件的更改
         /// </summary>
-        public async Task<bool> RevertFileAsync(string projectPath, string filePath, FileChangeStatus status)
+        /// <param name="projectPath">项目路径</param>
+        /// <param name="filePath">文件路径（相对路径）</param>
+        /// <param name="status">文件状态</param>
+        /// <param name="progress">进度回调（用于输出错误信息）</param>
+        public async Task<bool> RevertFileAsync(string projectPath, string filePath, FileChangeStatus status, IProgress<string>? progress = null)
         {
             try
             {
                 string command;
+                string fullPath = Path.Combine(projectPath, filePath);
+
                 if (status == FileChangeStatus.Untracked)
                 {
                     // 未跟踪文件：直接删除
-                    var fullPath = Path.Combine(projectPath, filePath);
                     if (File.Exists(fullPath))
+                    {
                         File.Delete(fullPath);
+                        progress?.Report($"已删除文件: {filePath}");
+                    }
                     else if (Directory.Exists(fullPath))
+                    {
                         Directory.Delete(fullPath, true);
+                        progress?.Report($"已删除目录: {filePath}");
+                    }
                     return true;
                 }
                 else if (status == FileChangeStatus.Added)
                 {
-                    // 新增文件：从暂存区移除并删除
-                    command = $"rm --cached \"{filePath}\"";
+                    // 新增文件（已暂存但从未提交）：从暂存区移除
+                    command = $"reset HEAD -- \"{filePath}\"";
                     await RunGitCommandAsync(projectPath, command);
 
-                    // 删除实际文件
-                    var fullPath = System.IO.Path.Combine(projectPath, filePath);
-                    if (System.IO.File.Exists(fullPath))
+                    // 删除实际文件（如果存在）
+                    if (File.Exists(fullPath))
                     {
-                        System.IO.File.Delete(fullPath);
+                        File.Delete(fullPath);
+                        progress?.Report($"已取消暂存并删除: {filePath}");
                     }
+                    return true;
                 }
-                else
+                else if (status == FileChangeStatus.Deleted)
                 {
-                    // 修改或删除：恢复到最近提交的版本
+                    // 已删除的文件：恢复到最近提交的版本
                     command = $"checkout HEAD -- \"{filePath}\"";
                     await RunGitCommandAsync(projectPath, command);
+                    progress?.Report($"已恢复文件: {filePath}");
+                    return true;
                 }
+                else if (status == FileChangeStatus.Modified || status == FileChangeStatus.Renamed)
+                {
+                    // 修改或重命名的文件：先尝试 git checkout HEAD
+                    // 如果失败（文件从未提交过），则取消暂存
+                    try
+                    {
+                        command = $"checkout HEAD -- \"{filePath}\"";
+                        await RunGitCommandAsync(projectPath, command);
+                        progress?.Report($"已恢复文件: {filePath}");
+                    }
+                    catch (GitCommandException ex) when (ex.Message.Contains("did not match any file"))
+                    {
+                        // 文件在 HEAD 中不存在，可能是已暂存的新文件
+                        progress?.Report($"文件在 HEAD 中不存在，取消暂存: {filePath}");
+                        command = $"reset HEAD -- \"{filePath}\"";
+                        await RunGitCommandAsync(projectPath, command);
+
+                        // 删除工作区中的修改
+                        if (File.Exists(fullPath))
+                        {
+                            File.Delete(fullPath);
+                            progress?.Report($"已取消暂存，删除工作区文件: {filePath}");
+                        }
+                    }
+                    return true;
+                }
+                else if (status == FileChangeStatus.Conflicted)
+                {
+                    // 冲突文件：使用 git checkout --ours
+                    command = $"checkout --ours \"{filePath}\"";
+                    await RunGitCommandAsync(projectPath, command);
+                    progress?.Report($"已解决冲突（使用本地版本）: {filePath}");
+                    return true;
+                }
+
                 return true;
             }
-            catch
+            catch (GitCommandException ex)
             {
+                progress?.Report($"撤销失败 [{filePath}]: {ex.Message}");
+                progress?.Report($"  命令: git {ex.Command}");
+                progress?.Report($"  退出码: {ex.ExitCode}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                progress?.Report($"撤销失败 [{filePath}]: {ex.Message}");
                 return false;
             }
         }
@@ -365,12 +450,12 @@ namespace DotNetBuilder.Services
         /// <summary>
         /// 撤销多个文件的更改
         /// </summary>
-        public async Task<int> RevertFilesAsync(string projectPath, IEnumerable<ChangedFile> files)
+        public async Task<int> RevertFilesAsync(string projectPath, IEnumerable<ChangedFile> files, IProgress<string>? progress = null)
         {
             int successCount = 0;
             foreach (var file in files.Where(f => f.IsSelected))
             {
-                if (await RevertFileAsync(projectPath, file.FilePath, file.Status))
+                if (await RevertFileAsync(projectPath, file.FilePath, file.Status, progress))
                 {
                     successCount++;
                 }
@@ -741,6 +826,7 @@ namespace DotNetBuilder.Services
         /// <summary>
         /// 运行Git命令
         /// </summary>
+        /// <exception cref="GitCommandException">当 git 命令返回非零退出码时抛出</exception>
         private async Task<string> RunGitCommandAsync(string workingDirectory, string arguments)
         {
             var startInfo = new ProcessStartInfo
@@ -769,17 +855,66 @@ namespace DotNetBuilder.Services
 
             await process.WaitForExitAsync();
 
-            if (error.Length > 0)
+            // 检查退出码
+            if (process.ExitCode != 0)
             {
-                var errorMsg = error.ToString();
-                // 忽略某些常见的不影响结果的警告
-                if (!errorMsg.Contains("warning:") && !errorMsg.Contains("Warning:"))
+                var errorMsg = error.ToString().Trim();
+                var outputMsg = output.ToString().Trim();
+
+                // 优先使用 stderr，如果没有则使用 stdout
+                var message = !string.IsNullOrEmpty(errorMsg) ? errorMsg : outputMsg;
+
+                if (string.IsNullOrEmpty(message))
                 {
-                    // 可以选择记录或抛出
+                    message = $"Git command failed with exit code {process.ExitCode}";
                 }
+
+                throw new GitCommandException(arguments, process.ExitCode, message);
+            }
+
+            // 即使退出码为 0，也检查 stderr 是否有错误信息（非 warning）
+            var stderrContent = error.ToString().Trim();
+            if (!string.IsNullOrEmpty(stderrContent) &&
+                !stderrContent.Contains("warning:", StringComparison.OrdinalIgnoreCase) &&
+                !stderrContent.Contains("Warning:", StringComparison.OrdinalIgnoreCase))
+            {
+                // 有些命令会输出到 stderr 但仍然成功，如 `git status`
+                // 这里可以记录但不抛出异常
             }
 
             return output.ToString().Trim();
+        }
+
+        /// <summary>
+        /// 运行 Git 命令（忽略错误，用于某些不关心失败的场景）
+        /// </summary>
+        private async Task<string> RunGitCommandIgnoreErrorAsync(string workingDirectory, string arguments)
+        {
+            try
+            {
+                return await RunGitCommandAsync(workingDirectory, arguments);
+            }
+            catch (GitCommandException)
+            {
+                // 忽略错误，返回空字符串
+                return string.Empty;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Git 命令执行异常
+    /// </summary>
+    public class GitCommandException : Exception
+    {
+        public string Command { get; }
+        public int ExitCode { get; }
+
+        public GitCommandException(string command, int exitCode, string message)
+            : base(message)
+        {
+            Command = command;
+            ExitCode = exitCode;
         }
     }
 }

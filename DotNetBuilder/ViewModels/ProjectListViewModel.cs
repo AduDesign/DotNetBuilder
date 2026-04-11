@@ -930,7 +930,8 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var success = await _gitService.RevertFileAsync(SelectedProject.Path, file.FilePath, file.Status);
+                var progress = new Progress<string>(msg => AppendLog($"[{SelectedProject.Name}] {msg}\n"));
+                var success = await _gitService.RevertFileAsync(SelectedProject.Path, file.FilePath, file.Status, progress);
                 if (success)
                 {
                     AppendLog($"[{SelectedProject.Name}] 已撤销: {file.FilePath}\n");
@@ -1008,7 +1009,8 @@ namespace DotNetBuilder.ViewModels
 
             try
             {
-                var successCount = await _gitService.RevertFilesAsync(targetProject.Path, selectedFiles);
+                var progress = new Progress<string>(msg => AppendLog($"[{targetProject.Name}] {msg}\n"));
+                var successCount = await _gitService.RevertFilesAsync(targetProject.Path, selectedFiles, progress);
                 AppendLog($"[{targetProject.Name}] 已撤销 {successCount}/{selectedFiles.Count} 个文件\n");
                 await _gitService.UpdateProjectStatusAsync(targetProject);
             }
