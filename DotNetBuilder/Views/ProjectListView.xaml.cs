@@ -8,10 +8,6 @@ namespace DotNetBuilder.Views
 {
     public partial class ProjectListView : UserControl
     {
-        private Point _dragStartPoint;
-        private bool _isDragging;
-        private GitProject? _draggedProject;
-
         public ProjectListView()
         {
             InitializeComponent();

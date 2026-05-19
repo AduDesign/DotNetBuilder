@@ -746,7 +746,7 @@ namespace DotNetBuilder.ViewModels
             try
             {
                 bool buildFailed = false;
-                foreach (var project in selectedProjects.OrderBy(p => p.SortOrder))
+                foreach (var project in selectedProjects)
                 {
                     if (buildFailed)
                     {
